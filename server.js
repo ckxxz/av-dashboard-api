@@ -1,5 +1,3 @@
-require("dotenv").config();
-
 const express = require("express");
 const path = require("path");
 const { google } = require("googleapis");
@@ -96,6 +94,29 @@ app.post("/api/updateTask", async (req, res) => {
   } catch (error) {
     console.error("Error updating task status:", error);
     res.status(500).send("Error updating task status");
+  }
+});
+
+app.post("/api/updateTimetable", async (req, res) => {
+  try {
+    const { date, time, part, task, assignee } = req.body;
+    const sheets = await getSheetsClient();
+
+    // timeTable 시트의 마지막 행에 추가
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: "timeTable!A1:E1",
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      resource: {
+        values: [[date, time, part, task, assignee]],
+      },
+    });
+
+    res.status(200).json({ success: true, message: "TimeTable 추가 성공" });
+  } catch (error) {
+    console.error("TimeTable 추가 실패:", error);
+    res.status(500).send("TimeTable 추가 실패");
   }
 });
 
