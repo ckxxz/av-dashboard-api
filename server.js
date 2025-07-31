@@ -3,7 +3,7 @@ const path = require("path");
 const { google } = require("googleapis");
 
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 3080;
 
 // JSON 요청 본문을 파싱하기 위해 미들웨어를 추가합니다.
 app.use(express.json());
