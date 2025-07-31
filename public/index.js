@@ -1,6 +1,7 @@
 // --- DATA ---
 const db = {
-  setupTasks: [],
+  facsetupTasks: [],
+  avsetupTasks: [],
   operationSchedule: [],
   soundData: [],
   soundSettings: { minDb: 65, maxDb: 80 },
@@ -14,9 +15,13 @@ const db = {
 
 async function loadAllData() {
   try {
-    const [setupData, scheduleData, timetableData, soundData] =
+    const [facsetupData, avsetupData, scheduleData, timetableData, soundData] =
       await Promise.all([
-        fetch("/api/SetupTasks").then((res) => {
+        fetch("/api/facSetupTasks").then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch SetupTasks");
+          return res.json();
+        }),
+        fetch("/api/avSetupTasks").then((res) => {
           if (!res.ok) throw new Error("Failed to fetch SetupTasks");
           return res.json();
         }),
@@ -38,7 +43,13 @@ async function loadAllData() {
         // }),
       ]);
 
-    db.setupTasks = setupData.map((d) => ({
+    db.facsetupTasks = facsetupData.map((d) => ({
+      ...d,
+      id: parseInt(d.id),
+      duration: parseInt(d.duration),
+      completed: d.completed ? d.completed.toUpperCase() === "TRUE" : false,
+    }));
+    db.avsetupTasks = avsetupData.map((d) => ({
       ...d,
       id: parseInt(d.id),
       duration: parseInt(d.duration),
@@ -72,12 +83,12 @@ let calendar; // ✅ 여기!
 
 const charts = {};
 
-function renderDashboard() {
-  // === 진행률 차트 ===
+function renderTeamProgressCharts(setupTasks, prefix) {
+  const teams = [...new Set(setupTasks.map((t) => t.team))];
   const teamProgress = {};
-  const teams = [...new Set(db.setupTasks.map((t) => t.team))];
+
   teams.forEach((team) => {
-    const teamTasks = db.setupTasks.filter((t) => t.team === team);
+    const teamTasks = setupTasks.filter((t) => t.team === team);
     teamProgress[team] = {
       total: teamTasks.length,
       completed: teamTasks.filter((t) => t.completed).length,
@@ -85,48 +96,34 @@ function renderDashboard() {
   });
 
   const overall = {
-    total: db.setupTasks.length,
-    completed: db.setupTasks.filter((t) => t.completed).length,
+    total: setupTasks.length,
+    completed: setupTasks.filter((t) => t.completed).length,
   };
 
-  if (overall.total > 0) {
-    renderDonutChart(
-      "overallProgressChart",
-      "전체",
-      overall.completed,
-      overall.total
-    );
-    renderDonutChart(
-      "audioProgressChart",
-      "AV부 오디오팀",
-      teamProgress["AV부 오디오팀"]?.completed || 0,
-      teamProgress["AV부 오디오팀"]?.total || 0
-    );
-    renderDonutChart(
-      "videoProgressChart",
-      "AV부 비디오팀",
-      teamProgress["AV부 비디오팀"]?.completed || 0,
-      teamProgress["AV부 비디오팀"]?.total || 0
-    );
-    renderDonutChart(
-      "stageProgressChart",
-      "AV부 무대팀",
-      teamProgress["AV부 무대팀"]?.completed || 0,
-      teamProgress["AV부 무대팀"]?.total || 0
-    );
-    renderDonutChart(
-      "itProgressChart",
-      "AV부 IT팀",
-      teamProgress["AV부 IT팀"]?.completed || 0,
-      teamProgress["AV부 IT팀"]?.total || 0
-    );
-  }
+  renderDonutChart(
+    `${prefix}OverallProgressChart`,
+    "전체",
+    overall.completed,
+    overall.total
+  );
 
-  // === 지연된 작업 표시 ===
-  const now = new Date("2025-07-05T13:00:00+09:00");
-  const delayedTasksList = document.getElementById("delayed-tasks-list");
+  teams.forEach((team, i) => {
+    const canvasId = `${prefix}TeamProgressChart${i + 1}`;
+    renderDonutChart(
+      canvasId,
+      team,
+      teamProgress[team].completed,
+      teamProgress[team].total
+    );
+  });
+}
+
+function renderDelayedTasks(setupTasks, containerId) {
+  const now = new Date();
+  const delayedTasksList = document.getElementById(containerId);
   delayedTasksList.innerHTML = "";
-  const delayedTasks = db.setupTasks.filter((task) => {
+
+  const delayedTasks = setupTasks.filter((task) => {
     if (!task.start) return false;
     const startTime = new Date(task.start);
     const endTime = new Date(startTime.getTime() + task.duration * 60000);
@@ -136,126 +133,278 @@ function renderDashboard() {
   if (delayedTasks.length > 0) {
     delayedTasks.forEach((task) => {
       delayedTasksList.innerHTML += `
-   <div class="flex justify-between items-center bg-red-50 p-2 rounded">
-     <span><span class="font-semibold">${task.team}</span> - ${task.task}</span>
-     <span class="text-red-600 font-bold">지연</span>
-   </div>`;
+        <div class="flex justify-between items-start bg-red-50 p-2 rounded">
+          <span class="break-words max-w-[80%]">
+            <span class="font-semibold">${task.team}</span> - ${task.task}
+          </span>
+          <span class="text-red-600 font-bold whitespace-nowrap min-w-[3rem] text-right pl-2">지연</span>
+        </div>`;
     });
   } else {
     delayedTasksList.innerHTML = `<p class="text-slate-500">지연된 작업이 없습니다.</p>`;
   }
-  // === 음향 상태 요약 ===
-  const competitionDateMap = {
-    1: "2025-08-15",
-    2: "2025-08-16",
-    3: "2025-08-17",
-  };
-  let closestDataGroup = [];
-  let dayToDisplay = 1;
-  let minDiff = Infinity;
-
-  for (const [dayStr, dateStr] of Object.entries(competitionDateMap)) {
-    const thisDay = parseInt(dayStr);
-    const dateBase = new Date(`${dateStr}T00:00:00+09:00`);
-    const dataOfDay = db.soundData.filter((d) => d.day === thisDay);
-    const groupedByTime = {};
-
-    for (const d of dataOfDay) {
-      if (!groupedByTime[d.time]) groupedByTime[d.time] = [];
-      groupedByTime[d.time].push(d);
-    }
-
-    for (const [timeKey, group] of Object.entries(groupedByTime)) {
-      const timeStr = extractTimePart(timeKey);
-      if (!timeStr) continue;
-
-      const parsedTime = parseTimeStringToDate(timeStr);
-      const fullDateTime = new Date(dateBase);
-      fullDateTime.setHours(parsedTime.getHours(), parsedTime.getMinutes());
-
-      const diff = Math.abs(now - fullDateTime);
-      if (diff < minDiff) {
-        minDiff = diff;
-        dayToDisplay = thisDay;
-        closestDataGroup = group;
-      }
-    }
-  }
-
-  document.getElementById(
-    "sound-summary-title"
-  ).textContent = `음향 상태 (${dayToDisplay}일차)`;
-
-  const avgDb =
-    closestDataGroup.reduce((acc, d) => acc + d.db, 0) /
-    (closestDataGroup.length || 1);
-  document.getElementById("avg-db-summary").textContent = `${avgDb.toFixed(
-    1
-  )} dB`;
-
-  const alertCount = closestDataGroup.filter(
-    (d) => d.db < db.soundSettings.minDb || d.db > db.soundSettings.maxDb
-  ).length;
-  document.getElementById("db-alert-summary").textContent = `${alertCount} 곳`;
-
-  const dailyData = db.soundData.filter((d) => d.day === dayToDisplay);
-  const dailyAvg =
-    dailyData.reduce((acc, d) => acc + d.db, 0) / dailyData.length;
-  document.getElementById(
-    "daily-avg-summary"
-  ).textContent = `${dailyAvg.toFixed(1)} dB`;
-
-  function extractTimePart(timeStr) {
-    const match = timeStr.match(/\((오전|오후)\s*\d{1,2}:\d{2}\)/);
-    return match ? match[0].replace(/[()]/g, "") : null;
-  }
-
-  function parseTimeStringToDate(timeStr) {
-    const [amPm, time] = timeStr.trim().split(" ");
-    let [hour, minute] = time.split(":").map(Number);
-    if (amPm === "오후" && hour !== 12) hour += 12;
-    if (amPm === "오전" && hour === 12) hour = 0;
-    const date = new Date();
-    date.setHours(hour, minute, 0, 0);
-    return date;
-  }
-
-  // === 운영 담당자 표시 ===
-  const onDutyList = document.getElementById("on-duty-list");
-  if (db.operationSchedule.length > 0) {
-    const todayStr = now.toISOString().slice(0, 10);
-    const currentHour = now.getHours();
-
-    const currentDaySchedule = db.operationSchedule.filter(
-      (s) => s.date === todayStr
-    );
-
-    let currentDuty = currentDaySchedule.find((slot) => {
-      const [startStr, endStr] = slot.time.split("-").map((s) => s.trim());
-      const [startHour] = startStr.split(":").map(Number);
-      const [endHour] = endStr.split(":").map(Number);
-      return currentHour >= startHour && currentHour < endHour;
-    });
-
-    if (!currentDuty && currentDaySchedule.length > 0) {
-      currentDuty = currentDaySchedule[0];
-    }
-    if (!currentDuty) {
-      currentDuty = db.operationSchedule[0];
-    }
-
-    document.getElementById(
-      "on-duty-title"
-    ).textContent = `운영 담당자 (${currentDuty.date}, ${currentDuty.time})`;
-
-    onDutyList.innerHTML = `
-<div><p class="font-semibold text-slate-700">오디오</p><p class="text-slate-500">${currentDuty.audio}</p></div>
-<div><p class="font-semibold text-slate-700">비디오</p><p class="text-slate-500">${currentDuty.video}</p></div>
-<div><p class="font-semibold text-slate-700">무대</p><p class="text-slate-500">${currentDuty.stage}</p></div>
-<div><p class="font-semibold text-slate-700">IT</p><p class="text-slate-500">${currentDuty.it}</p></div>
-`;
-  }
 }
+
+function renderDashboard() {
+  renderTeamProgressCharts(db.avsetupTasks, "av");
+  renderTeamProgressCharts(db.facsetupTasks, "fac");
+
+  renderDelayedTasks(db.avsetupTasks, "delayed-tasks-list-av");
+  renderDelayedTasks(db.facsetupTasks, "delayed-tasks-list-fac");
+
+  // 음향 상태 요약 & 운영담당자 처리 등은 그대로 유지
+}
+
+// function renderDashboard() {
+//   // === 진행률 차트 ===
+//   const teamProgress = {};
+//   const teams = [...new Set(db.avsetupTasks.map((t) => t.team))];
+//   teams.forEach((team) => {
+//     const teamTasks = db.avsetupTasks.filter((t) => t.team === team);
+//     teamProgress[team] = {
+//       total: teamTasks.length,
+//       completed: teamTasks.filter((t) => t.completed).length,
+//     };
+//   });
+
+//   const overall = {
+//     total: db.avsetupTasks.length,
+//     completed: db.avsetupTasks.filter((t) => t.completed).length,
+//   };
+
+//   if (overall.total > 0) {
+//     if (overall.total > 0) {
+//       renderDonutChart(
+//         "overallProgressChart",
+//         "전체",
+//         overall.completed,
+//         overall.total
+//       );
+
+//       renderDonutChart(
+//         "avAudioProgressChart",
+//         "오디오트러스팀",
+//         teamProgress["오디오트러스팀"]?.completed || 0,
+//         teamProgress["오디오트러스팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avVideoProgressChart",
+//         "사이드스피커팀",
+//         teamProgress["사이드스피커팀"]?.completed || 0,
+//         teamProgress["사이드스피커팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avStageProgressChart",
+//         "오디오AV데스크팀",
+//         teamProgress["오디오AV데스크팀"]?.completed || 0,
+//         teamProgress["오디오AV데스크팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avItProgressChart1",
+//         "전기팀",
+//         teamProgress["전기팀"]?.completed || 0,
+//         teamProgress["전기팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avItProgressChart2",
+//         "전광판트러스팀",
+//         teamProgress["전광판트러스팀"]?.completed || 0,
+//         teamProgress["전광판트러스팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avItProgressChart3",
+//         "비디오케이블팀",
+//         teamProgress["비디오케이블팀"]?.completed || 0,
+//         teamProgress["비디오케이블팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avItProgressChart4",
+//         "비디오AV데스크팀",
+//         teamProgress["비디오AV데스크팀"]?.completed || 0,
+//         teamProgress["비디오AV데스크팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avItProgressChart5",
+//         "무대팀",
+//         teamProgress["무대팀"]?.completed || 0,
+//         teamProgress["무대팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avItProgressChart6",
+//         "IT팀",
+//         teamProgress["IT팀"]?.completed || 0,
+//         teamProgress["IT팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avItProgressChart7",
+//         "지원팀",
+//         teamProgress["지원팀"]?.completed || 0,
+//         teamProgress["지원팀"]?.total || 0
+//       );
+//       renderDonutChart(
+//         "avItProgressChart8",
+//         "영상팀",
+//         teamProgress["영상팀"]?.completed || 0,
+//         teamProgress["영상팀"]?.total || 0
+//       );
+//     }
+//   }
+
+//   // === 지연된 작업 표시 ===
+//   const now = new Date("2025-07-05T13:00:00+09:00");
+//   const delayedTasksList = document.getElementById("delayed-tasks-list");
+//   delayedTasksList.innerHTML = "";
+//   const delayedTasks = db.setupTasks.filter((task) => {
+//     if (!task.start) return false;
+//     const startTime = new Date(task.start);
+//     const endTime = new Date(startTime.getTime() + task.duration * 60000);
+//     return !task.completed && now > endTime;
+//   });
+
+//   if (delayedTasks.length > 0) {
+//     delayedTasks.forEach((task) => {
+//       delayedTasksList.innerHTML += `
+//    <div class="flex justify-between items-center bg-red-50 p-2 rounded">
+//      <span><span class="font-semibold">${task.team}</span> - ${task.task}</span>
+//      <span class="text-red-600 font-bold">지연</span>
+//    </div>`;
+//     });
+//   } else {
+//     delayedTasksList.innerHTML = `<p class="text-slate-500">지연된 작업이 없습니다.</p>`;
+//   }
+//   // === 음향 상태 요약 ===
+//   const competitionDateMap = {
+//     1: "2025-08-15",
+//     2: "2025-08-16",
+//     3: "2025-08-17",
+//   };
+//   let closestDataGroup = [];
+//   let dayToDisplay = 1;
+//   let minDiff = Infinity;
+
+//   for (const [dayStr, dateStr] of Object.entries(competitionDateMap)) {
+//     const thisDay = parseInt(dayStr);
+//     const dateBase = new Date(`${dateStr}T00:00:00+09:00`);
+//     const dataOfDay = db.soundData.filter((d) => d.day === thisDay);
+//     const groupedByTime = {};
+
+//     for (const d of dataOfDay) {
+//       if (!groupedByTime[d.time]) groupedByTime[d.time] = [];
+//       groupedByTime[d.time].push(d);
+//     }
+
+//     for (const [timeKey, group] of Object.entries(groupedByTime)) {
+//       const timeStr = extractTimePart(timeKey);
+//       if (!timeStr) continue;
+
+//       const parsedTime = parseTimeStringToDate(timeStr);
+//       const fullDateTime = new Date(dateBase);
+//       fullDateTime.setHours(parsedTime.getHours(), parsedTime.getMinutes());
+
+//       const diff = Math.abs(now - fullDateTime);
+//       if (diff < minDiff) {
+//         minDiff = diff;
+//         dayToDisplay = thisDay;
+//         closestDataGroup = group;
+//       }
+//     }
+//   }
+
+//   document.getElementById(
+//     "sound-summary-title"
+//   ).textContent = `음향 상태 (${dayToDisplay}일차)`;
+
+//   const avgDb =
+//     closestDataGroup.reduce((acc, d) => acc + d.db, 0) /
+//     (closestDataGroup.length || 1);
+//   document.getElementById("avg-db-summary").textContent = `${avgDb.toFixed(
+//     1
+//   )} dB`;
+
+//   const alertCount = closestDataGroup.filter(
+//     (d) => d.db < db.soundSettings.minDb || d.db > db.soundSettings.maxDb
+//   ).length;
+//   document.getElementById("db-alert-summary").textContent = `${alertCount} 곳`;
+
+//   const dailyData = db.soundData.filter((d) => d.day === dayToDisplay);
+//   const dailyAvg =
+//     dailyData.reduce((acc, d) => acc + d.db, 0) / dailyData.length;
+//   document.getElementById(
+//     "daily-avg-summary"
+//   ).textContent = `${dailyAvg.toFixed(1)} dB`;
+
+//   function extractTimePart(timeStr) {
+//     const match = timeStr.match(/\((오전|오후)\s*\d{1,2}:\d{2}\)/);
+//     return match ? match[0].replace(/[()]/g, "") : null;
+//   }
+
+//   function parseTimeStringToDate(timeStr) {
+//     const [amPm, time] = timeStr.trim().split(" ");
+//     let [hour, minute] = time.split(":").map(Number);
+//     if (amPm === "오후" && hour !== 12) hour += 12;
+//     if (amPm === "오전" && hour === 12) hour = 0;
+//     const date = new Date();
+//     date.setHours(hour, minute, 0, 0);
+//     return date;
+//   }
+
+//   // === 운영 담당자 표시 ===
+//   const onDutyList = document.getElementById("on-duty-list");
+//   if (db.operationSchedule.length > 0) {
+//     const todayStr = now.toISOString().slice(0, 10);
+//     const currentHour = now.getHours();
+
+//     const currentDaySchedule = db.operationSchedule.filter(
+//       (s) => s.date === todayStr
+//     );
+
+//     let currentDuty = currentDaySchedule.find((slot) => {
+//       const [startStr, endStr] = slot.time.split("-").map((s) => s.trim());
+//       const [startHour] = startStr.split(":").map(Number);
+//       const [endHour] = endStr.split(":").map(Number);
+//       return currentHour >= startHour && currentHour < endHour;
+//     });
+
+//     if (!currentDuty && currentDaySchedule.length > 0) {
+//       currentDuty = currentDaySchedule[0];
+//     }
+//     if (!currentDuty) {
+//       currentDuty = db.operationSchedule[0];
+//     }
+
+//     document.getElementById(
+//       "on-duty-title"
+//     ).textContent = `운영 담당자 (${currentDuty.date}, ${currentDuty.time})`;
+
+//     onDutyList.innerHTML = `
+// <div><p class="font-semibold text-slate-700">오디오</p><p class="text-slate-500">${currentDuty.audio}</p></div>
+// <div><p class="font-semibold text-slate-700">비디오</p><p class="text-slate-500">${currentDuty.video}</p></div>
+// <div><p class="font-semibold text-slate-700">무대</p><p class="text-slate-500">${currentDuty.stage}</p></div>
+// <div><p class="font-semibold text-slate-700">IT</p><p class="text-slate-500">${currentDuty.it}</p></div>
+// `;
+//   }
+// }
+// 도넛 중앙 텍스트 플러그인 등록 (최초 1회)
+Chart.register({
+  id: "centerText",
+  beforeDraw(chart) {
+    const { width, height } = chart;
+    const ctx = chart.ctx;
+
+    const centerText = chart.config.options.plugins.centerText;
+    if (centerText && centerText.text) {
+      ctx.save();
+      ctx.font = `${centerText.fontWeight || "bold"} ${
+        centerText.fontSize || 16
+      }px sans-serif`;
+      ctx.fillStyle = centerText.color || "#111";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(centerText.text, width / 2, height / 2);
+      ctx.restore();
+    }
+  },
+});
 
 function renderDonutChart(canvasId, label, completed, total) {
   const ctx = document.getElementById(canvasId).getContext("2d");
@@ -284,32 +433,11 @@ function renderDonutChart(canvasId, label, completed, total) {
       plugins: {
         legend: { display: false },
         tooltip: { enabled: false },
-        title: {
-          display: true,
+        centerText: {
           text: `${percentage}%`,
-          position: "bottom",
-          align: "center",
-          font: {
-            size:
-              window.innerWidth <= 768
-                ? canvasId.includes("overall")
-                  ? 24
-                  : 24 // 모바일에서 더 큼
-                : canvasId.includes("overall")
-                ? 24
-                : 14,
-          },
+          fontSize: canvasId.includes("overall") ? 40 : 20,
+          fontWeight: "bold",
           color: "#334155",
-          padding: {
-            top:
-              window.innerWidth <= 768
-                ? canvasId.includes("overall")
-                  ? -55
-                  : -70
-                : canvasId.includes("overall")
-                ? -65
-                : -35,
-          },
         },
       },
     },
