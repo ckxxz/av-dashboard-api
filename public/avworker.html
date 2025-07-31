@@ -270,7 +270,11 @@
           const response = await fetch("/api/updateTask", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ taskId, completed: isCompleted }),
+            body: JSON.stringify({
+              taskId,
+              completed: nextStatus,
+              sheetName: tab === "fac" ? "facSetupTasks" : "avSetupTasks", // 시트 이름 명시
+            }),
           });
           if (!response.ok) {
             throw new Error("Failed to update task status");

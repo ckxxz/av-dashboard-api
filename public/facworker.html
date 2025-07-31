@@ -282,6 +282,15 @@
     </div>
 
     <script>
+      const statusOrder = ["대기", "진행중", "완료", "문제", "보류"];
+      const statusColorMap = {
+        대기: "bg-gray-400",
+        진행중: "bg-blue-500",
+        완료: "bg-green-500",
+        문제: "bg-red-500",
+        보류: "bg-yellow-500",
+      };
+
       let tasks = [];
       let currentFilter = "All";
 
@@ -293,9 +302,7 @@
           tasks = data.map((d) => ({
             ...d,
             id: parseInt(d.id),
-            completed: d.completed
-              ? d.completed.toUpperCase() === "TRUE"
-              : false,
+            completed: d.completed || "대기", // 기본값
           }));
         } catch (error) {
           console.error("Error loading data:", error);
@@ -303,27 +310,31 @@
         }
       }
 
-      async function updateTaskStatus(taskId, isCompleted) {
+      async function updateTaskStatus(taskId, tab = "fac") {
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        const currentIndex = statusOrder.indexOf(task.completed);
+        const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
+
         try {
           const response = await fetch("/api/updateTask", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ taskId, completed: isCompleted }),
+            body: JSON.stringify({
+              taskId,
+              completed: nextStatus,
+              sheetName: tab === "fac" ? "facSetupTasks" : "avSetupTasks",
+            }),
           });
-          if (!response.ok) {
-            throw new Error("Failed to update task status");
-          }
-          // Update local data to reflect change immediately
-          const task = tasks.find((t) => t.id === taskId);
-          if (task) task.completed = isCompleted;
+
+          if (!response.ok) throw new Error("Failed to update");
+
+          task.completed = nextStatus;
           renderTasks();
         } catch (error) {
-          console.error("Error updating task:", error);
-          alert("상태 업데이트에 실패했습니다. 잠시 후 다시 시도해주세요.");
-          // Revert checkbox state on failure
-          const task = tasks.find((t) => t.id === taskId);
-          if (task) task.completed = !isCompleted;
-          renderTasks();
+          console.error("상태 업데이트 실패:", error);
+          alert("상태 업데이트 실패");
         }
       }
 
@@ -334,13 +345,18 @@
           (task) => currentFilter === "All" || task.team === currentFilter
         );
 
+        const formatOptions = {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        };
+
         filteredTasks.forEach((task) => {
           const tr = document.createElement("tr");
-          tr.className = `task-row border-b border-slate-200 ${
-            task.completed ? "completed" : ""
-          }`;
+          tr.className = `task-row border-b border-slate-200`;
 
-          // 시작 시간과 완료 목표 시간 계산
           const startTime = task.start
             ? new Date(task.start.replace(/\s/g, "T"))
             : null;
@@ -349,51 +365,45 @@
               ? new Date(startTime.getTime() + parseInt(task.duration) * 60000)
               : null;
 
-          // 날짜 포맷팅 옵션
-          const formatOptions = {
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          };
-
           tr.innerHTML = `
-                    <td class="p-4 text-center align-middle">
-                        <input type="checkbox" data-task-id="${
-                          task.id
-                        }" class="h-8 w-8 rounded-lg border-gray-400 text-blue-600 focus:ring-blue-600 focus:ring-2 cursor-pointer" ${
-            task.completed ? "checked" : ""
-          }>
-                    </td>
-                    <td class="p-3 font-semibold task-name align-middle">${
-                      task.task
-                    }</td>
-                    <td class="p-3 text-center align-middle">
-                      ${
-                        task.memo && task.memo.trim() !== ""
-                          ? `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 있음">💬</button>`
-                          : `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 없음" class="opacity-30">💬</button>`
-                      }
-                    </td>
-                    <td class="p-3 align-middle">${task.person}</td>
-                    <td class="p-3 align-middle text-sm">${
-                      startTime && !isNaN(startTime)
-                        ? startTime.toLocaleString("ko-KR", formatOptions)
-                        : "미정"
-                    }</td>
-                    <td class="p-3 align-middle text-sm">${
-                      endTime && !isNaN(endTime)
-                        ? endTime.toLocaleString("ko-KR", formatOptions)
-                        : "미정"
-                    }</td>
-                    <td class="p-3 align-middle"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">${
-                      task.team
-                    }</span></td>
-                `;
+            <td class="p-4 text-center align-middle">
+              <button data-task-id="${
+                task.id
+              }" class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
+            statusColorMap[task.completed] || "bg-gray-300"
+          }">${task.completed}</button>
+            </td>
+            <td class="p-3 font-semibold task-name align-middle">${
+              task.task
+            }</td>
+            <td class="p-3 text-center align-middle">
+              ${
+                task.memo && task.memo.trim() !== ""
+                  ? `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 있음">💬</button>`
+                  : `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 없음" class="opacity-30">💬</button>`
+              }
+            </td>
+            <td class="p-3 align-middle">${task.person}</td>
+            <td class="p-3 align-middle text-sm">${
+              startTime && !isNaN(startTime)
+                ? startTime.toLocaleString("ko-KR", formatOptions)
+                : "미정"
+            }</td>
+            <td class="p-3 align-middle text-sm">${
+              endTime && !isNaN(endTime)
+                ? endTime.toLocaleString("ko-KR", formatOptions)
+                : "미정"
+            }</td>
+            <td class="p-3 align-middle">
+              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">
+                ${task.team}
+              </span>
+            </td>
+          `;
           tableBody.appendChild(tr);
         });
       }
+
       async function refreshData() {
         const loadingOverlay = document.getElementById("loading-overlay");
         loadingOverlay.style.display = "flex";
@@ -422,11 +432,11 @@
 
         document
           .getElementById("worker-tasks-table")
-          .addEventListener("change", (e) => {
-            if (e.target.type !== "checkbox") return;
-            const taskId = parseInt(e.target.dataset.taskId);
-            const isCompleted = e.target.checked;
-            updateTaskStatus(taskId, isCompleted);
+          .addEventListener("click", (e) => {
+            const btn = e.target.closest(".status-chip");
+            if (!btn) return;
+            const taskId = parseInt(btn.dataset.taskId);
+            updateTaskStatus(taskId);
           });
 
         document
@@ -441,7 +451,7 @@
         currentMemoTaskId = taskId;
         currentMemoTab = tab;
 
-        const taskList = tab === "fac" ? tasks : []; // 이 부분은 AV 지원 추가 시 수정
+        const taskList = tab === "fac" ? tasks : [];
         const task = taskList.find((t) => t.id === taskId);
 
         const memo = task?.memo || "";

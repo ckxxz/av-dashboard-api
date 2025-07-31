@@ -51,16 +51,19 @@ app.get("/api/:sheetName", async (req, res) => {
   }
 });
 
-// 데이터 쓰기 API 엔드포인트 (신규 추가)
 app.post("/api/updateTask", async (req, res) => {
   try {
-    const { taskId, completed } = req.body;
+    const { taskId, completed, sheetName } = req.body; // sheetName 추가
     const sheets = await getSheetsClient();
+
+    if (!sheetName) {
+      return res.status(400).send("sheetName is required");
+    }
 
     // 1. 해당 taskId가 몇 번째 행에 있는지 찾습니다.
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: "SetupTasks!A:A", // ID는 A열에 있다고 가정
+      range: `${sheetName}!A:A`, // 시트 이름 반영
     });
 
     const idColumn = response.data.values;
@@ -74,17 +77,15 @@ app.post("/api/updateTask", async (req, res) => {
     }
 
     const targetRow = rowIndex + 1; // 실제 시트 행 번호 (1부터 시작)
+    const targetColumn = "G"; // 'completed' 열 위치
 
-    // 2. 'completed' 열의 위치를 찾습니다. (G열이라고 가정)
-    const targetColumn = "G";
-
-    // 3. 해당 셀의 값을 업데이트합니다.
+    // 2. 해당 셀의 값을 업데이트합니다.
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `SetupTasks!${targetColumn}${targetRow}`,
+      range: `${sheetName}!${targetColumn}${targetRow}`,
       valueInputOption: "USER_ENTERED",
       resource: {
-        values: [[completed.toString().toUpperCase()]],
+        values: [[completed]],
       },
     });
 

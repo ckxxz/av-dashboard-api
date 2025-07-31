@@ -47,14 +47,14 @@ async function loadAllData() {
       ...d,
       id: parseInt(d.id),
       duration: parseInt(d.duration),
-      completed: d.completed ? d.completed.toUpperCase() === "TRUE" : false,
+      completed: (d.completed || "").trim(),
       memo: d.memo?.trim() || "",
     }));
     db.avsetupTasks = avsetupData.map((d) => ({
       ...d,
       id: parseInt(d.id),
       duration: parseInt(d.duration),
-      completed: d.completed ? d.completed.toUpperCase() === "TRUE" : false,
+      completed: (d.completed || "").trim(),
       memo: d.memo?.trim() || "",
     }));
     db.operationSchedule = scheduleData;
@@ -84,6 +84,15 @@ const state = {
   avSetupFilter: "All",
   operationDay: "2025-07-04",
   soundFilter: { day: 1, time: 1 },
+};
+
+const statusOrder = ["대기", "진행중", "완료", "문제", "보류"];
+const statusColorMap = {
+  대기: "bg-gray-400",
+  진행중: "bg-blue-500",
+  완료: "bg-green-500",
+  문제: "bg-red-500",
+  보류: "bg-yellow-500",
 };
 let calendar; // ✅ 여기!
 
@@ -221,7 +230,6 @@ function renderDonutChart(canvasId, label, completed, total) {
   });
 }
 function renderSetupTable(tab) {
-  console.log("▶️ renderSetupTable 실행됨, tab:", tab);
   const isFac = tab === "fac";
   const tableBody = document.getElementById(
     isFac ? "fac-setup-tasks-table" : "av-setup-tasks-table"
@@ -244,7 +252,7 @@ function renderSetupTable(tab) {
       : null;
 
     let rowClass = "";
-    if (task.completed) {
+    if (task.completed == "완료") {
       rowClass = "completed";
     } else if (endTime && now > endTime) {
       rowClass = "delayed";
@@ -258,6 +266,13 @@ function renderSetupTable(tab) {
       <td class="p-3"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">${
         task.team
       }</span></td>
+      <td class="p-3 text-center">
+        <button data-task-id="${
+          task.id
+        }" class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
+      statusColorMap[task.completed] || "bg-gray-300"
+    }">${task.completed}</button>
+      </td>
       <td class="p-3 font-semibold">${task.task}</td>
       <td class="p-3 text-center">
         ${
@@ -279,14 +294,38 @@ function renderSetupTable(tab) {
             })
           : "미정"
       }</td>
-      <td class="p-3 text-center">
-        <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${
-          task.completed ? "checked" : ""
-        } disabled>
-      </td>
     `;
     tableBody.appendChild(tr);
   });
+}
+
+async function updateTaskStatus(taskId, tab = "fac") {
+  const setupTasks = tab === "fac" ? db.facsetupTasks : db.avsetupTasks;
+  const task = setupTasks.find((t) => t.id == taskId); // == 로 형 변환 허용
+  if (!task) return;
+
+  const currentIndex = statusOrder.indexOf(task.completed);
+  const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
+
+  try {
+    const response = await fetch("/api/updateTask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        taskId,
+        completed: nextStatus,
+        sheetName: tab === "fac" ? "facSetupTasks" : "avSetupTasks",
+      }),
+    });
+
+    if (!response.ok) throw new Error("Failed to update");
+
+    task.completed = nextStatus;
+    renderSetupTable(tab);
+  } catch (error) {
+    console.error("상태 업데이트 실패:", error);
+    alert("상태 업데이트 실패");
+  }
 }
 
 let currentMemoTab = null;
@@ -826,6 +865,24 @@ window.onload = async () => {
       updateView();
       loadingOverlay.style.opacity = "0";
       setTimeout(() => (loadingOverlay.style.display = "none"), 300);
+    });
+
+  document
+    .getElementById("fac-setup-tasks-table")
+    .addEventListener("click", (e) => {
+      const btn = e.target.closest(".status-chip");
+      if (!btn) return;
+      const taskId = parseInt(btn.dataset.taskId);
+      updateTaskStatus(taskId);
+    });
+
+  document
+    .getElementById("av-setup-tasks-table")
+    .addEventListener("click", (e) => {
+      const btn = e.target.closest(".status-chip");
+      if (!btn) return;
+      const taskId = parseInt(btn.dataset.taskId);
+      updateTaskStatus(taskId);
     });
 
   document.querySelector("nav").addEventListener("click", handleNavClick);
