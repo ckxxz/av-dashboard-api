@@ -48,12 +48,14 @@ async function loadAllData() {
       id: parseInt(d.id),
       duration: parseInt(d.duration),
       completed: d.completed ? d.completed.toUpperCase() === "TRUE" : false,
+      memo: d.memo?.trim() || "",
     }));
     db.avsetupTasks = avsetupData.map((d) => ({
       ...d,
       id: parseInt(d.id),
       duration: parseInt(d.duration),
       completed: d.completed ? d.completed.toUpperCase() === "TRUE" : false,
+      memo: d.memo?.trim() || "",
     }));
     db.operationSchedule = scheduleData;
     db.timetable = timetableData;
@@ -64,6 +66,9 @@ async function loadAllData() {
     //     seat: d.seat,
     //     db: parseFloat(d.db),
     //   }));
+
+    console.log(db.facsetupTasks[0]);
+    console.log(db.avsetupTasks[0]);
   } catch (error) {
     console.error("Error loading data from API:", error);
     alert(
@@ -75,7 +80,8 @@ async function loadAllData() {
 // --- STATE ---
 const state = {
   activeTab: "dashboard",
-  setupFilter: "All",
+  facSetupFilter: "All",
+  avSetupFilter: "All",
   operationDay: "2025-07-04",
   soundFilter: { day: 1, time: 1 },
 };
@@ -155,235 +161,6 @@ function renderDashboard() {
   // 음향 상태 요약 & 운영담당자 처리 등은 그대로 유지
 }
 
-// function renderDashboard() {
-//   // === 진행률 차트 ===
-//   const teamProgress = {};
-//   const teams = [...new Set(db.avsetupTasks.map((t) => t.team))];
-//   teams.forEach((team) => {
-//     const teamTasks = db.avsetupTasks.filter((t) => t.team === team);
-//     teamProgress[team] = {
-//       total: teamTasks.length,
-//       completed: teamTasks.filter((t) => t.completed).length,
-//     };
-//   });
-
-//   const overall = {
-//     total: db.avsetupTasks.length,
-//     completed: db.avsetupTasks.filter((t) => t.completed).length,
-//   };
-
-//   if (overall.total > 0) {
-//     if (overall.total > 0) {
-//       renderDonutChart(
-//         "overallProgressChart",
-//         "전체",
-//         overall.completed,
-//         overall.total
-//       );
-
-//       renderDonutChart(
-//         "avAudioProgressChart",
-//         "오디오트러스팀",
-//         teamProgress["오디오트러스팀"]?.completed || 0,
-//         teamProgress["오디오트러스팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avVideoProgressChart",
-//         "사이드스피커팀",
-//         teamProgress["사이드스피커팀"]?.completed || 0,
-//         teamProgress["사이드스피커팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avStageProgressChart",
-//         "오디오AV데스크팀",
-//         teamProgress["오디오AV데스크팀"]?.completed || 0,
-//         teamProgress["오디오AV데스크팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avItProgressChart1",
-//         "전기팀",
-//         teamProgress["전기팀"]?.completed || 0,
-//         teamProgress["전기팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avItProgressChart2",
-//         "전광판트러스팀",
-//         teamProgress["전광판트러스팀"]?.completed || 0,
-//         teamProgress["전광판트러스팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avItProgressChart3",
-//         "비디오케이블팀",
-//         teamProgress["비디오케이블팀"]?.completed || 0,
-//         teamProgress["비디오케이블팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avItProgressChart4",
-//         "비디오AV데스크팀",
-//         teamProgress["비디오AV데스크팀"]?.completed || 0,
-//         teamProgress["비디오AV데스크팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avItProgressChart5",
-//         "무대팀",
-//         teamProgress["무대팀"]?.completed || 0,
-//         teamProgress["무대팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avItProgressChart6",
-//         "IT팀",
-//         teamProgress["IT팀"]?.completed || 0,
-//         teamProgress["IT팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avItProgressChart7",
-//         "지원팀",
-//         teamProgress["지원팀"]?.completed || 0,
-//         teamProgress["지원팀"]?.total || 0
-//       );
-//       renderDonutChart(
-//         "avItProgressChart8",
-//         "영상팀",
-//         teamProgress["영상팀"]?.completed || 0,
-//         teamProgress["영상팀"]?.total || 0
-//       );
-//     }
-//   }
-
-//   // === 지연된 작업 표시 ===
-//   const now = new Date("2025-07-05T13:00:00+09:00");
-//   const delayedTasksList = document.getElementById("delayed-tasks-list");
-//   delayedTasksList.innerHTML = "";
-//   const delayedTasks = db.setupTasks.filter((task) => {
-//     if (!task.start) return false;
-//     const startTime = new Date(task.start);
-//     const endTime = new Date(startTime.getTime() + task.duration * 60000);
-//     return !task.completed && now > endTime;
-//   });
-
-//   if (delayedTasks.length > 0) {
-//     delayedTasks.forEach((task) => {
-//       delayedTasksList.innerHTML += `
-//    <div class="flex justify-between items-center bg-red-50 p-2 rounded">
-//      <span><span class="font-semibold">${task.team}</span> - ${task.task}</span>
-//      <span class="text-red-600 font-bold">지연</span>
-//    </div>`;
-//     });
-//   } else {
-//     delayedTasksList.innerHTML = `<p class="text-slate-500">지연된 작업이 없습니다.</p>`;
-//   }
-//   // === 음향 상태 요약 ===
-//   const competitionDateMap = {
-//     1: "2025-08-15",
-//     2: "2025-08-16",
-//     3: "2025-08-17",
-//   };
-//   let closestDataGroup = [];
-//   let dayToDisplay = 1;
-//   let minDiff = Infinity;
-
-//   for (const [dayStr, dateStr] of Object.entries(competitionDateMap)) {
-//     const thisDay = parseInt(dayStr);
-//     const dateBase = new Date(`${dateStr}T00:00:00+09:00`);
-//     const dataOfDay = db.soundData.filter((d) => d.day === thisDay);
-//     const groupedByTime = {};
-
-//     for (const d of dataOfDay) {
-//       if (!groupedByTime[d.time]) groupedByTime[d.time] = [];
-//       groupedByTime[d.time].push(d);
-//     }
-
-//     for (const [timeKey, group] of Object.entries(groupedByTime)) {
-//       const timeStr = extractTimePart(timeKey);
-//       if (!timeStr) continue;
-
-//       const parsedTime = parseTimeStringToDate(timeStr);
-//       const fullDateTime = new Date(dateBase);
-//       fullDateTime.setHours(parsedTime.getHours(), parsedTime.getMinutes());
-
-//       const diff = Math.abs(now - fullDateTime);
-//       if (diff < minDiff) {
-//         minDiff = diff;
-//         dayToDisplay = thisDay;
-//         closestDataGroup = group;
-//       }
-//     }
-//   }
-
-//   document.getElementById(
-//     "sound-summary-title"
-//   ).textContent = `음향 상태 (${dayToDisplay}일차)`;
-
-//   const avgDb =
-//     closestDataGroup.reduce((acc, d) => acc + d.db, 0) /
-//     (closestDataGroup.length || 1);
-//   document.getElementById("avg-db-summary").textContent = `${avgDb.toFixed(
-//     1
-//   )} dB`;
-
-//   const alertCount = closestDataGroup.filter(
-//     (d) => d.db < db.soundSettings.minDb || d.db > db.soundSettings.maxDb
-//   ).length;
-//   document.getElementById("db-alert-summary").textContent = `${alertCount} 곳`;
-
-//   const dailyData = db.soundData.filter((d) => d.day === dayToDisplay);
-//   const dailyAvg =
-//     dailyData.reduce((acc, d) => acc + d.db, 0) / dailyData.length;
-//   document.getElementById(
-//     "daily-avg-summary"
-//   ).textContent = `${dailyAvg.toFixed(1)} dB`;
-
-//   function extractTimePart(timeStr) {
-//     const match = timeStr.match(/\((오전|오후)\s*\d{1,2}:\d{2}\)/);
-//     return match ? match[0].replace(/[()]/g, "") : null;
-//   }
-
-//   function parseTimeStringToDate(timeStr) {
-//     const [amPm, time] = timeStr.trim().split(" ");
-//     let [hour, minute] = time.split(":").map(Number);
-//     if (amPm === "오후" && hour !== 12) hour += 12;
-//     if (amPm === "오전" && hour === 12) hour = 0;
-//     const date = new Date();
-//     date.setHours(hour, minute, 0, 0);
-//     return date;
-//   }
-
-//   // === 운영 담당자 표시 ===
-//   const onDutyList = document.getElementById("on-duty-list");
-//   if (db.operationSchedule.length > 0) {
-//     const todayStr = now.toISOString().slice(0, 10);
-//     const currentHour = now.getHours();
-
-//     const currentDaySchedule = db.operationSchedule.filter(
-//       (s) => s.date === todayStr
-//     );
-
-//     let currentDuty = currentDaySchedule.find((slot) => {
-//       const [startStr, endStr] = slot.time.split("-").map((s) => s.trim());
-//       const [startHour] = startStr.split(":").map(Number);
-//       const [endHour] = endStr.split(":").map(Number);
-//       return currentHour >= startHour && currentHour < endHour;
-//     });
-
-//     if (!currentDuty && currentDaySchedule.length > 0) {
-//       currentDuty = currentDaySchedule[0];
-//     }
-//     if (!currentDuty) {
-//       currentDuty = db.operationSchedule[0];
-//     }
-
-//     document.getElementById(
-//       "on-duty-title"
-//     ).textContent = `운영 담당자 (${currentDuty.date}, ${currentDuty.time})`;
-
-//     onDutyList.innerHTML = `
-// <div><p class="font-semibold text-slate-700">오디오</p><p class="text-slate-500">${currentDuty.audio}</p></div>
-// <div><p class="font-semibold text-slate-700">비디오</p><p class="text-slate-500">${currentDuty.video}</p></div>
-// <div><p class="font-semibold text-slate-700">무대</p><p class="text-slate-500">${currentDuty.stage}</p></div>
-// <div><p class="font-semibold text-slate-700">IT</p><p class="text-slate-500">${currentDuty.it}</p></div>
-// `;
-//   }
-// }
 // 도넛 중앙 텍스트 플러그인 등록 (최초 1회)
 Chart.register({
   id: "centerText",
@@ -443,16 +220,24 @@ function renderDonutChart(canvasId, label, completed, total) {
     },
   });
 }
-
-function renderSetupTable() {
-  const tableBody = document.getElementById("setup-tasks-table");
-  tableBody.innerHTML = "";
-  const filteredTasks = db.setupTasks.filter(
-    (task) => state.setupFilter === "All" || task.team === state.setupFilter
+function renderSetupTable(tab) {
+  console.log("▶️ renderSetupTable 실행됨, tab:", tab);
+  const isFac = tab === "fac";
+  const tableBody = document.getElementById(
+    isFac ? "fac-setup-tasks-table" : "av-setup-tasks-table"
   );
+  tableBody.innerHTML = "";
+
+  const setupTasks = isFac ? db.facsetupTasks : db.avsetupTasks;
+  const filter = isFac ? state.facSetupFilter : state.avSetupFilter;
+
+  const filteredTasks = setupTasks.filter(
+    (task) => filter === "All" || task.team === filter
+  );
+
   const now = new Date();
 
-  filteredTasks.forEach((task) => {
+  filteredTasks.forEach((task, index) => {
     const startTime = task.start ? new Date(task.start) : null;
     const endTime = startTime
       ? new Date(startTime.getTime() + task.duration * 60000)
@@ -463,38 +248,120 @@ function renderSetupTable() {
       rowClass = "completed";
     } else if (endTime && now > endTime) {
       rowClass = "delayed";
-    } else if (startTime && endTime && now >= startTime && now <= endTime) {
+    } else if (startTime && now >= startTime && now <= endTime) {
       rowClass = "in-progress";
     }
 
     const tr = document.createElement("tr");
     tr.className = `task-row border-b border-slate-200 hover:bg-slate-50 ${rowClass}`;
     tr.innerHTML = `
-              <td class="p-3"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">${
-                task.team
-              }</span></td>
-              <td class="p-3 font-semibold">${task.task}</td>
-              <td class="p-3">${task.person}</td>
-              <td class="p-3">${task.duration}분</td>
-              <td class="p-3">${
-                startTime
-                  ? startTime.toLocaleString("ko-KR", {
-                      year: "numeric",
-                      month: "2-digit",
-                      day: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : "미정"
-              }</td>
-              <td class="p-3 text-center">
-                  <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${
-                    task.completed ? "checked" : ""
-                  } disabled>
-              </td>
-          `;
+      <td class="p-3"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">${
+        task.team
+      }</span></td>
+      <td class="p-3 font-semibold">${task.task}</td>
+      <td class="p-3 text-center">
+        ${
+          task.memo && task.memo.trim() !== ""
+            ? `<button onclick="openMemoPopup('${tab}', ${index})" title="메모 있음">💬</button>`
+            : `<button onclick="openMemoPopup('${tab}', ${index})" title="메모 없음" class="opacity-30">💬</button>`
+        }
+      </td>
+      <td class="p-3">${task.person}</td>
+      <td class="p-3">${task.duration}분</td>
+      <td class="p-3">${
+        startTime
+          ? startTime.toLocaleString("ko-KR", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "미정"
+      }</td>
+      <td class="p-3 text-center">
+        <input type="checkbox" class="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500" ${
+          task.completed ? "checked" : ""
+        } disabled>
+      </td>
+    `;
     tableBody.appendChild(tr);
   });
+}
+
+let currentMemoTab = null;
+let currentMemoIndex = null;
+
+function openMemoPopup(tab, index) {
+  currentMemoTab = tab;
+  currentMemoIndex = index;
+
+  const setupTasks = tab === "fac" ? db.facsetupTasks : db.avsetupTasks;
+  const task = setupTasks[index];
+
+  document.getElementById("memo-textarea").value = task.memo || "";
+  document.getElementById("memo-popup").classList.remove("hidden");
+}
+
+function closeMemoPopup() {
+  document.getElementById("memo-popup").classList.add("hidden");
+  currentMemoTab = null;
+  currentMemoIndex = null;
+}
+
+function saveMemo() {
+  const memo = document.getElementById("memo-textarea").value.trim();
+
+  if (currentMemoTab !== null && currentMemoIndex !== null) {
+    const setupTasks =
+      currentMemoTab === "fac" ? db.facsetupTasks : db.avsetupTasks;
+    setupTasks[currentMemoIndex].memo = memo;
+
+    // ✅ UI 업데이트
+    renderSetupTable(currentMemoTab);
+
+    // TODO: 실제 서버/스프레드시트에 저장하는 로직 필요
+    saveMemo();
+    closeMemoPopup();
+  }
+}
+
+function saveMemo() {
+  const memo = document.getElementById("memo-textarea").value.trim();
+
+  if (currentMemoTab !== null && currentMemoIndex !== null) {
+    const setupTasks =
+      currentMemoTab === "fac" ? db.facsetupTasks : db.avsetupTasks;
+    const task = setupTasks[currentMemoIndex];
+
+    task.memo = memo; // UI용 db에도 반영
+
+    // ✅ 서버에 저장
+    fetch("/api/updateMemo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        taskId: task.id, // 반드시 스프레드시트의 ID 값이여야 함
+        memo: memo,
+        tab: currentMemoTab, // "fac" 또는 "av"
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("서버 응답 오류");
+        return res.json();
+      })
+      .then((data) => {
+        console.log("✅ 메모 저장 성공:", data.message);
+        renderSetupTable(currentMemoTab);
+        closeMemoPopup();
+      })
+      .catch((err) => {
+        console.error("❌ 메모 저장 실패:", err);
+        alert("메모 저장에 실패했습니다.");
+      });
+  }
 }
 
 function renderOperationSchedule() {
@@ -847,19 +714,36 @@ function handleFilterClick(e) {
   const btn = e.target.closest(".filter-btn");
   if (!btn) return;
 
+  // 팀 필터 버튼
   if (btn.classList.contains("team-filter-btn")) {
-    state.setupFilter = btn.dataset.team;
-    document
-      .querySelectorAll(".team-filter-btn")
-      .forEach((b) => b.classList.remove("active"));
-    renderSetupTable();
-  } else if (btn.classList.contains("op-day-filter")) {
+    const team = btn.dataset.team;
+    const tab = btn.closest("#facsetup-content") !== null ? "fac" : "av";
+
+    if (tab === "fac") {
+      state.facSetupFilter = team;
+      document
+        .querySelectorAll("#facsetup-content .team-filter-btn")
+        .forEach((b) => b.classList.remove("active"));
+    } else {
+      state.avSetupFilter = team;
+      document
+        .querySelectorAll("#avsetup-content .team-filter-btn")
+        .forEach((b) => b.classList.remove("active"));
+    }
+
+    renderSetupTable(tab);
+  }
+
+  // 운영 일정 필터
+  else if (btn.classList.contains("op-day-filter")) {
     state.operationDay = btn.dataset.day;
     document
       .querySelectorAll(".op-day-filter")
       .forEach((b) => b.classList.remove("active"));
     renderOperationSchedule();
   }
+
+  // 활성화 표시
   btn.classList.add("active");
 }
 
@@ -873,6 +757,9 @@ function handleSoundFilterChange() {
 }
 
 function updateView() {
+  if (!state.facSetupFilter) state.facSetupFilter = "All";
+  if (!state.avSetupFilter) state.avSetupFilter = "All";
+
   document
     .querySelectorAll(".content-panel")
     .forEach((panel) => panel.classList.add("hidden"));
@@ -890,8 +777,11 @@ function updateView() {
     case "dashboard":
       renderDashboard();
       break;
-    case "setup":
-      renderSetupTable();
+    case "facsetup":
+      renderSetupTable("fac");
+      break;
+    case "avsetup":
+      renderSetupTable("av");
       break;
     case "operation":
       renderOperationSchedule();
@@ -917,6 +807,14 @@ window.onload = async () => {
 
   loadingOverlay.style.opacity = "0";
   setTimeout(() => (loadingOverlay.style.display = "none"), 300);
+
+  document
+    .getElementById("facsetup-content")
+    .addEventListener("click", handleFilterClick);
+
+  document
+    .getElementById("avsetup-content")
+    .addEventListener("click", handleFilterClick);
 
   // Set up event listeners
   document

@@ -6,10 +6,10 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, user-scalable=no"
     />
-    <title>사전설치 체크리스트 (자원봉사자용)</title>
+    <title>시설부 사전설치 체크리스트 (자원봉사자용)</title>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="고양04 AV공정표" />
+    <meta name="apple-mobile-web-app-title" content="고양10" />
     <link rel="apple-touch-icon" href="/icons/icon-180x180-woker.png" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -160,7 +160,9 @@
     <div class="container mx-auto p-4 md:p-6">
       <header class="mb-6 flex justify-between items-center">
         <div>
-          <h1 class="text-2xl font-bold text-slate-900">사전설치 공정표</h1>
+          <h1 class="text-2xl font-bold text-slate-900">
+            시설부 사전설치 체크리스트 (자원봉사자용)
+          </h1>
           <p class="text-slate-600 mt-1">
             담당하는 작업을 확인하고, 완료 시 체크박스를 선택해주세요.
           </p>
@@ -190,37 +192,45 @@
       </header>
 
       <main>
-        <div id="team-filter-controls" class="mb-4 flex space-x-2">
-          <button
-            data-team="All"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md active"
-          >
-            전체
-          </button>
-          <button
-            data-team="오디오팀"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-          >
-            오디오팀
-          </button>
-          <button
-            data-team="비디오팀"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-          >
-            비디오팀
-          </button>
-          <button
-            data-team="무대팀"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-          >
-            무대팀
-          </button>
-          <button
-            data-team="IT팀"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-          >
-            IT팀
-          </button>
+        <div id="team-filter-controls" class="mb-4 overflow-x-auto">
+          <div class="flex space-x-2 w-max min-w-full flex-nowrap">
+            <button
+              data-team="All"
+              class="filter-btn px-3 py-1 text-sm font-semibold rounded-md active"
+            >
+              전체
+            </button>
+            <button
+              data-team="무대팀"
+              class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+            >
+              무대팀
+            </button>
+            <button
+              data-team="설비팀"
+              class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+            >
+              설비팀
+            </button>
+            <button
+              data-team="전기팀"
+              class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+            >
+              전기팀
+            </button>
+            <button
+              data-team="사무팀"
+              class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+            >
+              사무팀
+            </button>
+            <button
+              data-team="디자인팀"
+              class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+            >
+              디자인팀
+            </button>
+          </div>
         </div>
         <div class="bg-white rounded-lg shadow-sm overflow-x-auto">
           <table class="w-full text-sm text-left">
@@ -228,6 +238,7 @@
               <tr>
                 <th class="p-3 w-16 text-center">완료</th>
                 <th class="p-3">작업 항목</th>
+                <th class="p-3 text-center">메모</th>
                 <th class="p-3">담당자</th>
                 <th class="p-3">시작 예정</th>
                 <th class="p-3">완료 목표</th>
@@ -243,13 +254,40 @@
       </main>
     </div>
 
+    <div
+      id="memo-popup"
+      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden"
+    >
+      <div class="bg-white p-6 rounded shadow-lg w-[90%] max-w-md">
+        <h2 class="text-lg font-semibold mb-2">메모</h2>
+        <textarea
+          id="memo-textarea"
+          class="w-full h-32 p-2 border rounded"
+        ></textarea>
+        <div class="flex justify-end mt-4 space-x-2">
+          <button
+            onclick="closeMemoPopup()"
+            class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+          >
+            닫기
+          </button>
+          <button
+            onclick="saveMemo()"
+            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            저장
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
       let tasks = [];
       let currentFilter = "All";
 
       async function fetchData() {
         try {
-          const response = await fetch("/api/SetupTasks");
+          const response = await fetch("/api/facSetupTasks");
           if (!response.ok) throw new Error("Failed to fetch tasks");
           const data = await response.json();
           tasks = data.map((d) => ({
@@ -331,6 +369,13 @@
                     <td class="p-3 font-semibold task-name align-middle">${
                       task.task
                     }</td>
+                    <td class="p-3 text-center align-middle">
+                      ${
+                        task.memo && task.memo.trim() !== ""
+                          ? `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 있음">💬</button>`
+                          : `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 없음" class="opacity-30">💬</button>`
+                      }
+                    </td>
                     <td class="p-3 align-middle">${task.person}</td>
                     <td class="p-3 align-middle text-sm">${
                       startTime && !isNaN(startTime)
@@ -388,6 +433,53 @@
           .getElementById("refresh-button")
           .addEventListener("click", refreshData);
       };
+
+      let currentMemoTaskId = null;
+      let currentMemoTab = "fac";
+
+      function openMemoPopup(tab, taskId) {
+        currentMemoTaskId = taskId;
+        currentMemoTab = tab;
+
+        const taskList = tab === "fac" ? tasks : []; // 이 부분은 AV 지원 추가 시 수정
+        const task = taskList.find((t) => t.id === taskId);
+
+        const memo = task?.memo || "";
+        document.getElementById("memo-textarea").value = memo;
+
+        document.getElementById("memo-popup").classList.remove("hidden");
+      }
+
+      function closeMemoPopup() {
+        document.getElementById("memo-popup").classList.add("hidden");
+      }
+
+      async function saveMemo() {
+        const newMemo = document.getElementById("memo-textarea").value;
+
+        try {
+          const response = await fetch("/api/updateMemo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              taskId: currentMemoTaskId,
+              tab: currentMemoTab,
+              memo: newMemo,
+            }),
+          });
+
+          if (!response.ok) throw new Error("서버 응답 오류");
+
+          const task = tasks.find((t) => t.id === currentMemoTaskId);
+          if (task) task.memo = newMemo;
+
+          closeMemoPopup();
+          renderTasks();
+        } catch (err) {
+          console.error("❌ 메모 저장 실패:", err);
+          alert("메모 저장 실패. 다시 시도해주세요.");
+        }
+      }
     </script>
   </body>
 </html>

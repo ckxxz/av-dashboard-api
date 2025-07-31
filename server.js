@@ -39,7 +39,7 @@ app.get("/api/:sheetName", async (req, res) => {
         headers.forEach((header, index) => {
           rowData[header] = row[index];
 
-          //console.log("데이터 :" + rowData[header]);
+          console.log("데이터 :" + rowData[header]);
         });
         return rowData;
       });
@@ -94,6 +94,54 @@ app.post("/api/updateTask", async (req, res) => {
   } catch (error) {
     console.error("Error updating task status:", error);
     res.status(500).send("Error updating task status");
+  }
+});
+
+app.post("/api/updateMemo", async (req, res) => {
+  try {
+    const { taskId, memo, tab } = req.body; // tab: "fac" 또는 "av"
+    const sheets = await getSheetsClient();
+
+    const sheetName =
+      tab === "fac" ? "facSetupTasks" : tab === "av" ? "avSetupTasks" : null;
+
+    if (!sheetName) {
+      return res.status(400).json({ error: "Invalid tab value" });
+    }
+
+    // 1. ID 열 가져오기
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!A:A`,
+    });
+
+    const idColumn = response.data.values;
+    let rowIndex = -1;
+    if (idColumn) {
+      rowIndex = idColumn.findIndex((row) => row[0] == taskId);
+    }
+
+    if (rowIndex === -1) {
+      return res.status(404).send("Task ID not found");
+    }
+
+    const targetRow = rowIndex + 1; // 1-based index
+    const memoColumn = "H"; // 예: 메모가 H열에 있다고 가정
+
+    // 2. 메모 업데이트
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!${memoColumn}${targetRow}`,
+      valueInputOption: "USER_ENTERED",
+      resource: {
+        values: [[memo]],
+      },
+    });
+
+    res.status(200).json({ success: true, message: "메모가 저장되었습니다" });
+  } catch (error) {
+    console.error("메모 저장 오류:", error);
+    res.status(500).send("서버 오류");
   }
 });
 

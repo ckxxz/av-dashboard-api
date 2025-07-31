@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>고양10 지역대회 시설부, AV부 대시보드</title>
+    <title>고양10 지역대회 설치&운영 대시보드</title>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, user-scalable=no"
@@ -197,7 +197,7 @@
       <header class="mb-6 flex justify-between items-center">
         <div>
           <h1 class="text-3xl font-bold text-slate-900">
-            고양10 지역대회 시설부, AV부 대시보드
+            고양10 지역대회 설치&운영 대시보드
           </h1>
           <p class="text-slate-600 mt-1">
             대회 전 시설부와 AV부의 사전설치부터 운영까지 모든 현황을 실시간으로
@@ -334,7 +334,9 @@
                 <div
                   class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[65%]"
                 >
-                  <h3 class="font-bold text-slate-800 mb-2">지연 작업 목록</h3>
+                  <h3 class="font-bold text-slate-800 mb-2">
+                    시설부 지연 작업 목록
+                  </h3>
                   <div
                     id="delayed-tasks-list-fac"
                     class="space-y-2 text-sm max-h-48 overflow-y-auto pr-1"
@@ -438,7 +440,9 @@
                 <div
                   class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[65%]"
                 >
-                  <h3 class="font-bold text-slate-800 mb-2">지연 작업 목록</h3>
+                  <h3 class="font-bold text-slate-800 mb-2">
+                    AV부 지연 작업 목록
+                  </h3>
                   <div
                     id="delayed-tasks-list-av"
                     class="space-y-2 text-sm max-h-96 overflow-y-auto pr-1"
@@ -509,43 +513,45 @@
               팀별 사전설치 작업의 진행 상태를 관리하고 추적합니다. (읽기 전용)
             </p>
           </div>
-          <div class="mb-4 flex space-x-2">
-            <button
-              data-team="All"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md active"
-            >
-              전체
-            </button>
-            <button
-              data-team="무대팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              무대팀
-            </button>
-            <button
-              data-team="설비팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              설비팀
-            </button>
-            <button
-              data-team="전기팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              전기팀
-            </button>
-            <button
-              data-team="사무팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              사무팀
-            </button>
-            <button
-              data-team="디자인팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              디자인팀
-            </button>
+          <div class="mb-4 overflow-x-auto">
+            <div class="flex space-x-2 w-max min-w-full flex-nowrap">
+              <button
+                data-team="All"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md active"
+              >
+                전체
+              </button>
+              <button
+                data-team="무대팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+              >
+                무대팀
+              </button>
+              <button
+                data-team="설비팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+              >
+                설비팀
+              </button>
+              <button
+                data-team="전기팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+              >
+                전기팀
+              </button>
+              <button
+                data-team="사무팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+              >
+                사무팀
+              </button>
+              <button
+                data-team="디자인팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+              >
+                디자인팀
+              </button>
+            </div>
           </div>
           <div class="bg-white rounded-lg shadow-sm overflow-x-auto">
             <table class="w-full text-sm text-left">
@@ -553,13 +559,14 @@
                 <tr>
                   <th class="p-3">팀</th>
                   <th class="p-3">작업 항목</th>
+                  <th class="p-3 text-center">메모</th>
                   <th class="p-3">담당자</th>
                   <th class="p-3">예상 소요</th>
                   <th class="p-3">시작 예정</th>
                   <th class="p-3 text-center">완료 여부</th>
                 </tr>
               </thead>
-              <tbody id="setup-tasks-table">
+              <tbody id="fac-setup-tasks-table">
                 <!-- Setup tasks will be populated by JS -->
               </tbody>
             </table>
@@ -574,79 +581,81 @@
               팀별 사전설치 작업의 진행 상태를 관리하고 추적합니다. (읽기 전용)
             </p>
           </div>
-          <div class="mb-4 flex space-x-2">
-            <button
-              data-team="All"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md active"
-            >
-              전체
-            </button>
-            <button
-              data-team="오디오트러스팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              오디오트러스팀
-            </button>
-            <button
-              data-team="사이드스피커팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              사이드스피커팀
-            </button>
-            <button
-              data-team="오디오AV데스크팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              오디오AV데스크팀
-            </button>
-            <button
-              data-team="전기팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              전기팀
-            </button>
-            <button
-              data-team="전광판트러스팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              전광판트러스팀
-            </button>
-            <button
-              data-team="비디오케이블팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              비디오케이블팀
-            </button>
-            <button
-              data-team="비디오AV데스크팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              비디오AV데스크팀
-            </button>
-            <button
-              data-team="무대팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              무대팀
-            </button>
-            <button
-              data-team="IT팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              IT팀
-            </button>
-            <button
-              data-team="지원팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              지원팀
-            </button>
-            <button
-              data-team="영상팀"
-              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-            >
-              영상팀
-            </button>
+          <div class="mb-4 overflow-x-auto">
+            <div class="flex space-x-2 w-max min-w-full flex-nowrap">
+              <button
+                data-team="All"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md active min-w-fit"
+              >
+                전체
+              </button>
+              <button
+                data-team="오디오트러스팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                오디오트러스팀
+              </button>
+              <button
+                data-team="사이드스피커팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                사이드스피커팀
+              </button>
+              <button
+                data-team="오디오AV데스크팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                오디오AV데스크팀
+              </button>
+              <button
+                data-team="전기팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                전기팀
+              </button>
+              <button
+                data-team="전광판트러스팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                전광판트러스팀
+              </button>
+              <button
+                data-team="비디오케이블팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                비디오케이블팀
+              </button>
+              <button
+                data-team="비디오AV데스크팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                비디오AV데스크팀
+              </button>
+              <button
+                data-team="무대팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                무대팀
+              </button>
+              <button
+                data-team="IT팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                IT팀
+              </button>
+              <button
+                data-team="지원팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                지원팀
+              </button>
+              <button
+                data-team="영상팀"
+                class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+              >
+                영상팀
+              </button>
+            </div>
           </div>
           <div class="bg-white rounded-lg shadow-sm overflow-x-auto">
             <table class="w-full text-sm text-left">
@@ -660,7 +669,7 @@
                   <th class="p-3 text-center">완료 여부</th>
                 </tr>
               </thead>
-              <tbody id="setup-tasks-table">
+              <tbody id="av-setup-tasks-table">
                 <!-- Setup tasks will be populated by JS -->
               </tbody>
             </table>
@@ -800,6 +809,33 @@
     </div>
 
     <!-- TimeTable 추가 팝업 -->
+    <div
+      id="memo-popup"
+      class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50"
+    >
+      <div class="bg-white p-6 rounded shadow-md w-[90%] max-w-md">
+        <h3 class="text-lg font-bold mb-2">메모 수정</h3>
+        <textarea
+          id="memo-textarea"
+          class="w-full border rounded p-2 h-32 mb-4"
+          placeholder="메모를 입력하세요."
+        ></textarea>
+        <div class="flex justify-end gap-2">
+          <button
+            onclick="closeMemoPopup()"
+            class="px-3 py-1 bg-gray-300 rounded"
+          >
+            취소
+          </button>
+          <button
+            onclick="saveMemo()"
+            class="px-3 py-1 bg-blue-600 text-white rounded"
+          >
+            저장
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- Chart.js and plugin scripts moved here to ensure they load before the main script -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

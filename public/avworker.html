@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, user-scalable=no"
     />
-    <title>사전설치 체크리스트 (자원봉사자용)</title>
+    <title>AV부 사전설치 체크리스트 (자원봉사자용)</title>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="고양04 AV공정표" />
@@ -249,7 +249,7 @@
 
       async function fetchData() {
         try {
-          const response = await fetch("/api/SetupTasks");
+          const response = await fetch("/api/avSetupTasks");
           if (!response.ok) throw new Error("Failed to fetch tasks");
           const data = await response.json();
           tasks = data.map((d) => ({
