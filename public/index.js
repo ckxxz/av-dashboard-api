@@ -5,12 +5,7 @@ const db = {
   operationSchedule: [],
   soundData: [],
   soundSettings: { minDb: 65, maxDb: 80 },
-  seatLayout: [
-    ["11", "12", "13"],
-    ["6", "7", "8", "9", "10"],
-    ["1", "2", "3", "4", "5"],
-  ],
-  timetable: [], // ✅ 추가
+  timetable: [],
 };
 
 async function loadAllData() {
@@ -33,10 +28,10 @@ async function loadAllData() {
           if (!res.ok) throw new Error("Failed to fetch timeTable");
           return res.json();
         }),
-        //   fetch("/api/SoundData").then((res) => {
-        //     if (!res.ok) throw new Error("Failed to fetch SoundData");
-        //     return res.json();
-        //   }),
+        fetch("/api/SoundData").then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch SoundData");
+          return res.json();
+        }),
         // fetch("/api2/white-bc-values").then((res) => {
         //   if (!res.ok) throw new Error("Failed to fetch white-bc-values");
         //   return res.json();
@@ -59,16 +54,9 @@ async function loadAllData() {
     }));
     db.operationSchedule = scheduleData;
     db.timetable = timetableData;
-    console.log("타임테이블 데이터 확인:", db.timetable);
-    //   db.soundData = soundData.map((d) => ({
-    //     day: d.day,
-    //     time: d.time,
-    //     seat: d.seat,
-    //     db: parseFloat(d.db),
-    //   }));
+    db.soundData = soundData;
 
-    console.log(db.facsetupTasks[0]);
-    console.log(db.avsetupTasks[0]);
+    console.log(soundData);
   } catch (error) {
     console.error("Error loading data from API:", error);
     alert(
@@ -82,10 +70,10 @@ const state = {
   activeTab: "dashboard",
   facSetupFilter: "All",
   avSetupFilter: "All",
-  operationDay: "2025-07-04",
+  operationDay: "2025-08-15",
   facCurrentDateFilter: "All",
   avCurrentDateFilter: "All",
-  soundFilter: { day: 1, time: 1 },
+  soundFilter: { day: 1, time: "" },
 };
 
 const statusOrder = ["대기", "진행중", "완료", "문제", "보류"];
@@ -100,6 +88,23 @@ let calendar; // ✅ 여기!
 
 const charts = {};
 
+const timeOptionMap = {
+  1: [
+    "9:20",
+    "9:30",
+    "9:40",
+    "10:40",
+    "10:50",
+    "1:35",
+    "1:45",
+    "1:50",
+    "2:50",
+    "3:00",
+  ],
+  2: ["9:20", "9:40", "10:20", "1:35", "1:50", "3:20"],
+  3: ["9:20", "9:40", "11:05", "1:35", "1:50", "2:55"],
+};
+
 function renderTeamProgressCharts(setupTasks, prefix) {
   const teams = [...new Set(setupTasks.map((t) => t.team))];
   const teamProgress = {};
@@ -108,13 +113,13 @@ function renderTeamProgressCharts(setupTasks, prefix) {
     const teamTasks = setupTasks.filter((t) => t.team === team);
     teamProgress[team] = {
       total: teamTasks.length,
-      completed: teamTasks.filter((t) => t.completed).length,
+      completed: teamTasks.filter((t) => t.completed === "완료").length,
     };
   });
 
   const overall = {
     total: setupTasks.length,
-    completed: setupTasks.filter((t) => t.completed).length,
+    completed: setupTasks.filter((t) => t.completed === "완료").length,
   };
 
   renderDonutChart(
@@ -144,7 +149,7 @@ function renderDelayedTasks(setupTasks, containerId) {
     if (!task.start) return false;
     const startTime = new Date(task.start);
     const endTime = new Date(startTime.getTime() + task.duration * 60000);
-    return !task.completed && now > endTime;
+    return task.completed !== "완료" && now > endTime;
   });
 
   if (delayedTasks.length > 0) {
@@ -284,6 +289,10 @@ function renderSetupTable(tab) {
       rowClass = "in-progress";
     }
 
+    const status = statusOrder.includes(task.completed)
+      ? task.completed
+      : "대기";
+
     const tr = document.createElement("tr");
     tr.className = `task-row border-b border-slate-200 hover:bg-slate-50 ${rowClass}`;
 
@@ -297,11 +306,11 @@ function renderSetupTable(tab) {
               <button data-task-id="${
                 task.id
               }" class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
-      statusColorMap[task.completed] || "bg-gray-300"
-    }">${task.completed}</button>
+      statusColorMap[status] || "bg-gray-300"
+    }">${status}</button>
             </td>
             <td
-                class="p-3 font-semibold task-name align-middle"
+                class="p-3 font-semibold task-name align-middle whitespace-nowrap"
             >
               ${task.task}
             </td>
@@ -442,51 +451,76 @@ function saveMemo() {
 function renderOperationSchedule() {
   const tableBody = document.getElementById("operation-schedule-table");
   tableBody.innerHTML = "";
+
   const filteredSchedule = db.operationSchedule.filter(
     (slot) => slot.date === state.operationDay
   );
 
-  filteredSchedule.forEach((slot) => {
-    tableBody.innerHTML += `
-              <tr class="border-b border-slate-200 hover:bg-slate-50">
-                  <td class="p-3 font-semibold">${slot.time}</td>
-                  <td class="p-3">${slot.audio}</td>
-                  <td class="p-3">${slot.video}</td>
-                  <td class="p-3">${slot.stage}</td>
-                  <td class="p-3">${slot.it}</td>
-                  <td class="p-3">${slot.backup}</td>
-              </tr>
-          `;
+  // 시간대 기준으로 데이터 추출
+  const timeSlots = {
+    오전: filteredSchedule.find((s) => s.time === "오전") || {},
+    오후: filteredSchedule.find((s) => s.time === "오후") || {},
+  };
+
+  // 팀 키값과 팀 이름 정의
+  const teams = ["audio", "video", "stage", "it"];
+  const teamNames = {
+    audio: "오디오",
+    video: "비디오",
+    stage: "무대",
+    it: "IT",
+  };
+
+  // 팀별로 행 생성
+  teams.forEach((team) => {
+    const row = document.createElement("tr");
+    row.className = "border-b border-slate-200 hover:bg-slate-50";
+    row.innerHTML = `
+      <td class="p-3 font-semibold min-w-[80px]">${teamNames[team]}</td>
+      <td class="p-3 w-1/2">${timeSlots["오전"][team] || ""}</td>
+      <td class="p-3 w-1/2">${timeSlots["오후"][team] || ""}</td>
+    `;
+    tableBody.appendChild(row);
   });
+}
+
+function parseDayLabel(timeStr = "") {
+  if (timeStr.includes("첫째날")) return 1;
+  if (timeStr.includes("둘째날")) return 2;
+  if (timeStr.includes("셋째날")) return 3;
+  return null;
+}
+
+function parseTimeLabel(timeStr = "") {
+  const match = timeStr.match(/(\d{1,2}:\d{2})/);
+  return match ? match[1] : "";
 }
 
 function renderSoundAnalysis() {
   const timeFilterEl = document.getElementById("sound-time-filter");
-  timeFilterEl.innerHTML = ""; // 기존 옵션 제거
-
   const currentDay = parseInt(
     document.getElementById("sound-day-filter").value || "1"
   );
+  const timeOptionsRaw = timeOptionMap[currentDay] || [];
+  const timeOptions = timeOptionsRaw.map((label) => {
+    const match = label.match(/(\d{1,2}:\d{2})/);
+    return match ? match[1] : "";
+  });
 
-  // 현재 day의 고유한 time 라벨 추출
-  const timeLabels = Array.from(
-    new Set(db.soundData.filter((d) => d.day === currentDay).map((d) => d.time))
-  );
-
-  // 드롭다운 옵션 생성
-  timeLabels.forEach((label) => {
+  timeFilterEl.innerHTML = "";
+  timeOptions.forEach((time) => {
     const option = document.createElement("option");
-    option.value = label;
-    option.textContent = label;
-    if (label === state.soundFilter.time) {
+    option.value = time;
+    option.textContent = time;
+    if (time === state.soundFilter.time) {
       option.selected = true;
     }
     timeFilterEl.appendChild(option);
   });
 
-  // state 초기화 (필요 시)
-  if (!timeLabels.includes(state.soundFilter.time)) {
-    state.soundFilter.time = timeLabels[0];
+  // 선택값 유효성 검사 및 state 반영
+  if (!timeOptions.includes(state.soundFilter.time)) {
+    state.soundFilter.time = timeOptions[0]; // fallback
   }
 
   state.soundFilter.day = currentDay;
@@ -495,25 +529,47 @@ function renderSoundAnalysis() {
   const { day, time } = state.soundFilter;
 
   // heatmap용 필터링
-  const filteredData = db.soundData.filter(
-    (d) => d.day === day && d.time === time
-  );
+  const filteredData = db.soundData.filter((d) => {
+    return parseDayLabel(d.Time) === day && parseTimeLabel(d.Time) === time;
+  });
 
   const heatmapDataPoints = [];
-  const maxCols = Math.max(...db.seatLayout.map((r) => r.length));
+  let number = 1;
 
-  db.seatLayout.forEach((row, rowIndex) => {
-    const offset = (maxCols - row.length) / 2;
-    row.forEach((seat, seatIndex) => {
-      const seatData = filteredData.find((d) => d.seat === seat);
+  for (let rowIndex = 3; rowIndex >= 0; rowIndex--) {
+    for (let colIndex = 0; colIndex < 9; colIndex++) {
+      const isLeftEdge = colIndex === 0;
+      const isRightEdge = colIndex === 8;
+      const isOnlyAllowedRowAtSides = rowIndex === 1;
+      const isBottomRow = rowIndex === 0;
+      const isAllowedBottomCol = colIndex === 2 || colIndex === 6;
+
+      if (
+        ((isLeftEdge || isRightEdge) && !isOnlyAllowedRowAtSides) ||
+        (isBottomRow && !isAllowedBottomCol)
+      ) {
+        continue;
+      }
+
+      let seatNo;
+      if (rowIndex === 1 && colIndex === 0) seatNo = 22;
+      else if (rowIndex === 1 && colIndex === 8) seatNo = 23;
+      else if (rowIndex === 0 && colIndex === 2) seatNo = 24;
+      else if (rowIndex === 0 && colIndex === 6) seatNo = 25;
+      else seatNo = number++;
+
+      // filteredData에서 Location이 seatNo와 같은 항목 찾기
+      const seatData = filteredData.find((d) => Number(d.Location) === seatNo);
+
       heatmapDataPoints.push({
-        x: seatIndex + offset,
+        x: colIndex,
         y: rowIndex,
-        v: seatData ? seatData.db : null,
-        seatName: seat,
+        v: seatData ? parseFloat(seatData.dB) : null,
+        seatName: `#${seatNo}`,
+        comment: seatData?.Comment || "",
       });
-    });
-  });
+    }
+  }
 
   const heatmapData = {
     datasets: [
@@ -523,24 +579,28 @@ function renderSoundAnalysis() {
         backgroundColor: (c) => getColorForDb(c.raw.v),
         borderColor: "rgba(255, 255, 255, 0.5)",
         borderWidth: 1,
-        radius: 20,
+        radius: 12, // 🔹 작게
       },
     ],
   };
   renderHeatmapChart(heatmapData);
 
+  const timeLabels = timeOptionMap[currentDay] || [];
   // 트렌드 차트 구성
   const trendData = {
-    labels: timeLabels,
+    labels: timeOptions,
     datasets: [
       {
-        label: `일일 평균 데시벨`,
-        data: timeLabels.map((label) => {
-          const timeData = db.soundData.filter(
-            (d) => d.day === currentDay && d.time === label
+        label: "일일 평균 데시벨",
+        data: timeOptions.map((timeLabel) => {
+          const matched = db.soundData.filter(
+            (d) =>
+              parseDayLabel(d.Time) === currentDay &&
+              parseTimeLabel(d.Time) === timeLabel
           );
-          return timeData.length
-            ? timeData.reduce((acc, d) => acc + d.db, 0) / timeData.length
+          return matched.length
+            ? matched.reduce((sum, d) => sum + parseFloat(d.dB), 0) /
+                matched.length
             : NaN;
         }),
         borderColor: "#3b82f6",
@@ -575,8 +635,11 @@ function renderHeatmapChart(data) {
             title: (context) => `좌석: ${context[0].raw.seatName}`,
             label: (context) => {
               const value = context.raw.v;
+              const comment = context.raw.comment;
               return value !== null
-                ? `데시벨: ${value.toFixed(1)} dB`
+                ? `데시벨: ${value.toFixed(1)} dB${
+                    comment ? ` / ${comment}` : ""
+                  }`
                 : "데이터 없음";
             },
           },
@@ -585,13 +648,13 @@ function renderHeatmapChart(data) {
       scales: {
         y: {
           min: -0.5,
-          max: db.seatLayout.length - 0.5,
+          max: 3.5, // 항상 4행
           grid: { display: false },
           ticks: { display: false },
         },
         x: {
           min: -0.5,
-          max: Math.max(...db.seatLayout.map((r) => r.length)) - 0.5,
+          max: 8.5, // 항상 9열
           grid: { display: false },
           ticks: { display: false },
         },
@@ -807,10 +870,7 @@ function handleFilterClick(e) {
     }
 
     renderSetupTable(tab);
-  }
-
-  // 운영 일정 필터
-  else if (btn.classList.contains("op-day-filter")) {
+  } else if (btn.classList.contains("op-day-filter")) {
     state.operationDay = btn.dataset.day;
     document
       .querySelectorAll(".op-day-filter")

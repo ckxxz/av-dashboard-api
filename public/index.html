@@ -721,34 +721,31 @@
           </div>
           <div class="mb-4 flex space-x-2">
             <button
-              data-day="2025-07-04"
+              data-day="2025-08-15"
               class="filter-btn op-day-filter px-3 py-1 text-sm font-semibold rounded-md active"
             >
               8월 15일 (1일차)
             </button>
             <button
-              data-day="2025-07-05"
+              data-day="2025-08-16"
               class="filter-btn op-day-filter px-3 py-1 text-sm font-semibold rounded-md"
             >
               8월 16일 (2일차)
             </button>
             <button
-              data-day="2025-07-06"
+              data-day="2025-08-17"
               class="filter-btn op-day-filter px-3 py-1 text-sm font-semibold rounded-md"
             >
               8월 17일 (3일차)
             </button>
           </div>
-          <div class="bg-white rounded-lg shadow-sm overflow-x-auto">
+          <div class="bg-white rounded-lg shadow-sm">
             <table class="w-full text-sm text-left">
               <thead class="bg-slate-100 text-slate-600">
                 <tr>
-                  <th class="p-3">시간대</th>
-                  <th class="p-3">오디오팀</th>
-                  <th class="p-3">비디오팀</th>
-                  <th class="p-3">무대팀</th>
-                  <th class="p-3">IT팀</th>
-                  <th class="p-3">백업 담당자</th>
+                  <th class="p-3">팀/시간</th>
+                  <th class="p-3">오전</th>
+                  <th class="p-3">오후</th>
                 </tr>
               </thead>
               <tbody id="operation-schedule-table">
@@ -794,12 +791,7 @@
               <select
                 id="sound-time-filter"
                 class="p-2 border rounded-md text-sm"
-              >
-                <!-- <option value="1">1차 (09:00)</option>
-                <option value="2">2차 (13:00)</option>
-                <option value="3">3차 (15:00)</option>
-                <option value="4">4차 (17:00)</option> -->
-              </select>
+              ></select>
             </div>
           </div>
 
@@ -843,7 +835,6 @@
       </main>
     </div>
 
-    <!-- TimeTable 추가 팝업 -->
     <div
       id="memo-popup"
       class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50"
