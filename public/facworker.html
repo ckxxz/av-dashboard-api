@@ -192,6 +192,22 @@
       </header>
 
       <main>
+        <div id="date-filter-controls" class="mb-2">
+          <span class="text-sm text-slate-700 whitespace-nowrap"
+            >날짜를 선택해주세요.</span
+          >
+          <select
+            id="date-filter"
+            class="px-3 py-1 text-sm rounded-md border border-gray-300"
+          >
+            <option value="All">전체 날짜</option>
+            <option value="2025-08-13">2025년 8월 13일</option>
+            <option value="2025-08-14">2025년 8월 14일</option>
+            <option value="2025-08-15">2025년 8월 15일</option>
+            <option value="2025-08-16">2025년 8월 16일</option>
+            <option value="2025-08-17">2025년 8월 17일</option>
+          </select>
+        </div>
         <div id="team-filter-controls" class="mb-4 overflow-x-auto">
           <div class="flex space-x-2 w-max min-w-full flex-nowrap">
             <button
@@ -236,13 +252,14 @@
           <table class="w-full text-sm text-left">
             <thead class="bg-slate-100 text-slate-600">
               <tr>
-                <th class="p-3 w-16 text-center">완료</th>
+                <th class="p-3">팀</th>
+                <th class="p-3 text-center">상태</th>
                 <th class="p-3">작업 항목</th>
-                <th class="p-3 text-center">메모</th>
+                <th class="p-3 text-center min-w-[64px]">메모</th>
                 <th class="p-3">담당자</th>
                 <th class="p-3">시작 예정</th>
                 <th class="p-3">완료 목표</th>
-                <th class="p-3">팀</th>
+                <th class="p-3 min-w-[64px]">자료</th>
               </tr>
             </thead>
 
@@ -292,7 +309,8 @@
       };
 
       let tasks = [];
-      let currentFilter = "All";
+      let currentFilter = "All"; // 팀 필터
+      let currentDateFilter = "All"; // 날짜 필터
 
       async function fetchData() {
         try {
@@ -341,9 +359,22 @@
       function renderTasks() {
         const tableBody = document.getElementById("worker-tasks-table");
         tableBody.innerHTML = "";
-        const filteredTasks = tasks.filter(
-          (task) => currentFilter === "All" || task.team === currentFilter
-        );
+        const filteredTasks = tasks.filter((task) => {
+          const matchesTeam =
+            currentFilter === "All" || task.team === currentFilter;
+
+          // 날짜 필터링 처리
+          let matchesDate = true;
+          if (currentDateFilter !== "All" && task.start) {
+            const taskDate = task.start
+              .split(" ")[0]
+              .replace(/\./g, "-")
+              .trim();
+            matchesDate = taskDate === currentDateFilter;
+          }
+
+          return matchesTeam && matchesDate;
+        });
 
         const formatOptions = {
           month: "2-digit",
@@ -366,40 +397,50 @@
               : null;
 
           tr.innerHTML = `
-            <td class="p-4 text-center align-middle">
+            <td class="p-3 align-middle whitespace-nowrap">
+              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">
+                ${task.team}
+              </span>
+            </td>
+            <td class="p-4 text-center align-middle whitespace-nowrap">
               <button data-task-id="${
                 task.id
               }" class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
             statusColorMap[task.completed] || "bg-gray-300"
           }">${task.completed}</button>
             </td>
-            <td class="p-3 font-semibold task-name align-middle">${
-              task.task
-            }</td>
-            <td class="p-3 text-center align-middle">
+            <td
+                class="p-3 font-semibold task-name align-middle"
+            >
+              ${task.task}
+            </td>
+            <td class="p-3 text-center align-middle whitespace-nowrap">
               ${
                 task.memo && task.memo.trim() !== ""
-                  ? `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 있음">💬</button>`
-                  : `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 없음" class="opacity-30">💬</button>`
+                  ? `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 있음">📌</button>`
+                  : `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 없음" class="opacity-10">📌</button>`
               }
             </td>
-            <td class="p-3 align-middle">${task.person}</td>
-            <td class="p-3 align-middle text-sm">${
+            <td class="p-3 align-middle whitespace-nowrap">${task.person}</td>
+            <td class="p-3 align-middle text-sm whitespace-nowrap">${
               startTime && !isNaN(startTime)
                 ? startTime.toLocaleString("ko-KR", formatOptions)
                 : "미정"
             }</td>
-            <td class="p-3 align-middle text-sm">${
+            <td class="p-3 align-middle text-sm whitespace-nowrap">${
               endTime && !isNaN(endTime)
                 ? endTime.toLocaleString("ko-KR", formatOptions)
                 : "미정"
             }</td>
-            <td class="p-3 align-middle">
-              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">
-                ${task.team}
-              </span>
+            <td class="p-3 text-center align-middle whitespace-nowrap">
+              ${
+                task.link && task.link.trim() !== ""
+                  ? `<a href="${task.link}" target="_blank" class="inline-block text-blue-600 underline font-semibold hover:text-blue-800">링크</a>`
+                  : ""
+              }
             </td>
           `;
+
           tableBody.appendChild(tr);
         });
       }
@@ -417,6 +458,7 @@
       window.onload = async () => {
         await refreshData();
 
+        // 팀 필터링
         document
           .getElementById("team-filter-controls")
           .addEventListener("click", (e) => {
@@ -430,6 +472,7 @@
             renderTasks();
           });
 
+        // 상태 업데이트
         document
           .getElementById("worker-tasks-table")
           .addEventListener("click", (e) => {
@@ -437,6 +480,14 @@
             if (!btn) return;
             const taskId = parseInt(btn.dataset.taskId);
             updateTaskStatus(taskId);
+          });
+
+        // 날짜 필터링
+        document
+          .getElementById("date-filter")
+          .addEventListener("change", (e) => {
+            currentDateFilter = e.target.value;
+            renderTasks();
           });
 
         document

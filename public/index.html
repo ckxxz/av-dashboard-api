@@ -241,13 +241,13 @@
           data-tab="facsetup"
           class="tab-btn px-4 py-2 text-sm font-semibold text-slate-600 border-b-2 border-transparent hover:border-blue-500 hover:text-blue-500"
         >
-          시설부 사전설치 체크리스트
+          시설부 체크리스트
         </button>
         <button
           data-tab="avsetup"
           class="tab-btn px-4 py-2 text-sm font-semibold text-slate-600 border-b-2 border-transparent hover:border-blue-500 hover:text-blue-500"
         >
-          AV부 사전설치 체크리스트
+          AV부 체크리스트
         </button>
         <button
           data-tab="operation"
@@ -508,10 +508,26 @@
         <!-- Fac Pre-Setup Content -->
         <div id="facsetup-content" class="content-panel hidden">
           <div class="mb-6">
-            <h2 class="text-xl font-bold mb-1">시설부 사전설치 체크리스트</h2>
+            <h2 class="text-xl font-bold mb-1">시설부 체크리스트</h2>
             <p class="text-slate-500 text-sm">
               팀별 사전설치 작업의 진행 상태를 관리하고 추적합니다. (읽기 전용)
             </p>
+          </div>
+          <div id="date-filter-controls" class="mb-2">
+            <span class="text-sm text-slate-700 whitespace-nowrap"
+              >날짜를 선택해주세요.</span
+            >
+            <select
+              id="facdate-filter"
+              class="px-3 py-1 text-sm rounded-md border border-gray-300"
+            >
+              <option value="All">전체 날짜</option>
+              <option value="2025-08-13">2025년 8월 13일</option>
+              <option value="2025-08-14">2025년 8월 14일</option>
+              <option value="2025-08-15">2025년 8월 15일</option>
+              <option value="2025-08-16">2025년 8월 16일</option>
+              <option value="2025-08-17">2025년 8월 17일</option>
+            </select>
           </div>
           <div class="mb-4 overflow-x-auto">
             <div class="flex space-x-2 w-max min-w-full flex-nowrap">
@@ -560,10 +576,11 @@
                   <th class="p-3">팀</th>
                   <th class="p-3 text-center">상태</th>
                   <th class="p-3">작업 항목</th>
-                  <th class="p-3 text-center">메모</th>
+                  <th class="p-3 text-center min-w-[64px]">메모</th>
                   <th class="p-3">담당자</th>
-                  <th class="p-3">예상 소요</th>
                   <th class="p-3">시작 예정</th>
+                  <th class="p-3">완료 목표</th>
+                  <th class="p-3 min-w-[64px]">자료</th>
                 </tr>
               </thead>
               <tbody id="fac-setup-tasks-table">
@@ -576,10 +593,26 @@
         <!-- AV Pre-Setup Content -->
         <div id="avsetup-content" class="content-panel hidden">
           <div class="mb-6">
-            <h2 class="text-xl font-bold mb-1">AV부 사전설치 체크리스트</h2>
+            <h2 class="text-xl font-bold mb-1">AV부 체크리스트</h2>
             <p class="text-slate-500 text-sm">
               팀별 사전설치 작업의 진행 상태를 관리하고 추적합니다. (읽기 전용)
             </p>
+          </div>
+          <div id="date-filter-controls" class="mb-2">
+            <span class="text-sm text-slate-700 whitespace-nowrap"
+              >날짜를 선택해주세요.</span
+            >
+            <select
+              id="avdate-filter"
+              class="px-3 py-1 text-sm rounded-md border border-gray-300"
+            >
+              <option value="All">전체 날짜</option>
+              <option value="2025-08-13">2025년 8월 13일</option>
+              <option value="2025-08-14">2025년 8월 14일</option>
+              <option value="2025-08-15">2025년 8월 15일</option>
+              <option value="2025-08-16">2025년 8월 16일</option>
+              <option value="2025-08-17">2025년 8월 17일</option>
+            </select>
           </div>
           <div class="mb-4 overflow-x-auto">
             <div class="flex space-x-2 w-max min-w-full flex-nowrap">
@@ -664,9 +697,11 @@
                   <th class="p-3">팀</th>
                   <th class="p-3 text-center">상태</th>
                   <th class="p-3">작업 항목</th>
+                  <th class="p-3 text-center min-w-[64px]">메모</th>
                   <th class="p-3">담당자</th>
-                  <th class="p-3">예상 소요</th>
                   <th class="p-3">시작 예정</th>
+                  <th class="p-3">완료 목표</th>
+                  <th class="p-3 min-w-[64px]">자료</th>
                 </tr>
               </thead>
               <tbody id="av-setup-tasks-table">

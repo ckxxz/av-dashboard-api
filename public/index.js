@@ -83,6 +83,8 @@ const state = {
   facSetupFilter: "All",
   avSetupFilter: "All",
   operationDay: "2025-07-04",
+  facCurrentDateFilter: "All",
+  avCurrentDateFilter: "All",
   soundFilter: { day: 1, time: 1 },
 };
 
@@ -238,18 +240,40 @@ function renderSetupTable(tab) {
 
   const setupTasks = isFac ? db.facsetupTasks : db.avsetupTasks;
   const filter = isFac ? state.facSetupFilter : state.avSetupFilter;
+  const selectedDate = isFac
+    ? state.facCurrentDateFilter
+    : state.avCurrentDateFilter;
 
-  const filteredTasks = setupTasks.filter(
-    (task) => filter === "All" || task.team === filter
-  );
+  const filteredTasks = setupTasks.filter((task) => {
+    const matchesTeam = filter === "All" || task.team === filter;
+
+    let matchesDate = true;
+    if (selectedDate !== "All" && task.start) {
+      const taskDate = task.start.split(" ")[0].replace(/\./g, "-").trim(); // "2025. 08. 13"
+      const dateOnly = taskDate.replace(/\s+/g, "").replace(/\.$/, "");
+      matchesDate = dateOnly === selectedDate;
+    }
+
+    return matchesTeam && matchesDate;
+  });
 
   const now = new Date();
+  const formatOptions = {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  };
 
   filteredTasks.forEach((task, index) => {
-    const startTime = task.start ? new Date(task.start) : null;
-    const endTime = startTime
-      ? new Date(startTime.getTime() + task.duration * 60000)
+    const startTime = task.start
+      ? new Date(task.start.replace(/\s/g, "T"))
       : null;
+    const endTime =
+      startTime && task.duration
+        ? new Date(startTime.getTime() + parseInt(task.duration) * 60000)
+        : null;
 
     let rowClass = "";
     if (task.completed == "완료") {
@@ -262,39 +286,51 @@ function renderSetupTable(tab) {
 
     const tr = document.createElement("tr");
     tr.className = `task-row border-b border-slate-200 hover:bg-slate-50 ${rowClass}`;
+
     tr.innerHTML = `
-      <td class="p-3"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">${
-        task.team
-      }</span></td>
-      <td class="p-3 text-center">
-        <button data-task-id="${
-          task.id
-        }" class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
+            <td class="p-3 align-middle whitespace-nowrap">
+              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">
+                ${task.team}
+              </span>
+            </td>
+            <td class="p-4 text-center align-middle whitespace-nowrap">
+              <button data-task-id="${
+                task.id
+              }" class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
       statusColorMap[task.completed] || "bg-gray-300"
     }">${task.completed}</button>
-      </td>
-      <td class="p-3 font-semibold">${task.task}</td>
-      <td class="p-3 text-center">
-        ${
-          task.memo && task.memo.trim() !== ""
-            ? `<button onclick="openMemoPopup('${tab}', ${index})" title="메모 있음">💬</button>`
-            : `<button onclick="openMemoPopup('${tab}', ${index})" title="메모 없음" class="opacity-30">💬</button>`
-        }
-      </td>
-      <td class="p-3">${task.person}</td>
-      <td class="p-3">${task.duration}분</td>
-      <td class="p-3">${
-        startTime
-          ? startTime.toLocaleString("ko-KR", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-              hour: "2-digit",
-              minute: "2-digit",
-            })
-          : "미정"
-      }</td>
-    `;
+            </td>
+            <td
+                class="p-3 font-semibold task-name align-middle"
+            >
+              ${task.task}
+            </td>
+            <td class="p-3 text-center align-middle whitespace-nowrap">
+              ${
+                task.memo && task.memo.trim() !== ""
+                  ? `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 있음">📌</button>`
+                  : `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 없음" class="opacity-10">📌</button>`
+              }
+            </td>
+            <td class="p-3 align-middle whitespace-nowrap">${task.person}</td>
+            <td class="p-3 align-middle text-sm whitespace-nowrap">${
+              startTime && !isNaN(startTime)
+                ? startTime.toLocaleString("ko-KR", formatOptions)
+                : "미정"
+            }</td>
+            <td class="p-3 align-middle text-sm whitespace-nowrap">${
+              endTime && !isNaN(endTime)
+                ? endTime.toLocaleString("ko-KR", formatOptions)
+                : "미정"
+            }</td>
+            <td class="p-3 text-center align-middle whitespace-nowrap">
+              ${
+                task.link && task.link.trim() !== ""
+                  ? `<a href="${task.link}" target="_blank" class="inline-block text-blue-600 underline font-semibold hover:text-blue-800">링크</a>`
+                  : ""
+              }
+            </td>
+          `;
     tableBody.appendChild(tr);
   });
 }
@@ -895,6 +931,17 @@ window.onload = async () => {
   document
     .getElementById("sound-time-filter")
     .addEventListener("change", handleSoundFilterChange);
+
+  // 날짜 필터링
+  document.getElementById("facdate-filter").addEventListener("change", (e) => {
+    state.facCurrentDateFilter = e.target.value;
+    renderSetupTable("fac");
+  });
+
+  document.getElementById("avdate-filter").addEventListener("change", (e) => {
+    state.avCurrentDateFilter = e.target.value;
+    renderSetupTable("av");
+  });
 
   // Initial render
   document
