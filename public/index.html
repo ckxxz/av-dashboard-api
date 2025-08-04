@@ -280,66 +280,91 @@
           </div>
 
           <!-- 시설부 진행률 -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div class="bg-white p-6 rounded-lg shadow-sm">
+          <div
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch"
+          >
+            <!-- 좌: 시설부 진행률 (전체 높이 채움) -->
+            <div class="bg-white p-6 rounded-lg shadow-sm h-full">
               <h3 class="font-bold text-slate-800 mb-2">시설부 진행률</h3>
-              <div class="chart-container h-48 w-48 mx-auto">
-                <canvas id="facOverallProgressChart"></canvas>
+
+              <!-- 13일: 사전설치 -->
+              <div class="h-48 w-48 mx-auto flex flex-col items-center">
+                <div class="h-40 w-40">
+                  <canvas
+                    id="fac13OverallProgressChart"
+                    aria-label="13일 시설부 사전설치 진행률"
+                  ></canvas>
+                </div>
+                <span class="text-xs font-semibold mt-3">사전설치</span>
+              </div>
+
+              <!-- 17일: 철거 -->
+              <div class="h-48 w-48 mx-auto mt-10 flex flex-col items-center">
+                <div class="h-40 w-40">
+                  <canvas
+                    id="fac17OverallProgressChart"
+                    aria-label="17일 시설부 철거 진행률"
+                  ></canvas>
+                </div>
+                <span class="text-xs font-semibold mt-3">철거</span>
               </div>
             </div>
 
-            <!-- 팀별 + 지연 묶음 -->
-            <div class="lg:col-span-3 col-span-1 w-full">
-              <div class="flex flex-col lg:flex-row gap-6">
-                <!-- 팀별 진행률 -->
+            <!-- 우: 팀별 + 지연 묶음 (좌측 카드 높이에 맞춰 전체 h-full) -->
+            <div class="lg:col-span-3 col-span-1 w-full h-full">
+              <!-- 우측 래퍼: 전체 높이를 두 카드가 1:1로 나눠 가짐 -->
+              <div class="h-full flex flex-col lg:flex-row gap-6">
+                <!-- 팀별 진행률 카드 -->
                 <div
-                  class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[35%]"
+                  class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[35%] flex-1 flex flex-col"
                 >
                   <h3 class="font-bold text-slate-800 mb-2">팀별 진행률</h3>
                   <div class="grid grid-cols-3 gap-4 pt-2">
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="facTeamProgressChart1"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">무대팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="facTeamProgressChart2"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">설비팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="facTeamProgressChart3"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">전기팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="facTeamProgressChart4"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">사무팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="facTeamProgressChart5"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">디자인팀</p>
                     </div>
                   </div>
+                  <!-- 필요 시 아래 공간을 채우고 싶으면 추가 컨텐츠에 flex-grow 적용 -->
                 </div>
 
-                <!-- 지연 작업 목록 -->
+                <!-- 지연 작업 목록 카드 -->
                 <div
-                  class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[65%]"
+                  class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[65%] flex-1 flex flex-col"
                 >
                   <h3 class="font-bold text-slate-800 mb-2">
                     시설부 지연 작업 목록
                   </h3>
+                  <!-- 카드 내부에서 남은 공간을 리스트가 채우고 스크롤 -->
                   <div
                     id="delayed-tasks-list-fac"
-                    class="space-y-2 text-sm max-h-48 overflow-y-auto pr-1"
+                    class="space-y-2 text-sm flex-1 overflow-y-auto pr-1 max-h-96"
                   ></div>
                 </div>
               </div>
@@ -348,104 +373,113 @@
 
           <!-- AV부 진행률 -->
           <div
-            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6 items-stretch"
           >
-            <div class="bg-white p-6 rounded-lg shadow-sm">
+            <!-- 좌: AV부 진행률 (전체 높이 채움) -->
+            <div class="bg-white p-6 rounded-lg shadow-sm h-full">
               <h3 class="font-bold text-slate-800 mb-2">AV부 진행률</h3>
-              <div class="chart-container h-48 w-48 mx-auto">
-                <canvas id="avOverallProgressChart"></canvas>
+
+              <!-- 13일: 사전설치 -->
+              <div class="h-48 w-48 mx-auto flex flex-col items-center">
+                <div class="h-40 w-40">
+                  <canvas
+                    id="av13OverallProgressChart"
+                    aria-label="13일 AV부 사전설치 진행률"
+                  ></canvas>
+                </div>
+                <span class="text-xs font-semibold mt-3">사전설치</span>
+              </div>
+
+              <!-- 17일: 철거 -->
+              <div class="h-48 w-48 mx-auto mt-10 flex flex-col items-center">
+                <div class="h-40 w-40">
+                  <canvas
+                    id="av17OverallProgressChart"
+                    aria-label="17일 AV부 철거 진행률"
+                  ></canvas>
+                </div>
+                <span class="text-xs font-semibold mt-3">철거</span>
               </div>
             </div>
 
-            <div class="lg:col-span-3 col-span-1 w-full">
-              <div class="flex flex-col lg:flex-row gap-6">
-                <!-- AV부 팀별 진행률 -->
+            <!-- 우: 팀별 + 지연 묶음 (좌측 카드 높이에 맞춰 전체 h-full) -->
+            <div class="lg:col-span-3 col-span-1 w-full h-full">
+              <div class="h-full flex flex-col lg:flex-row gap-6">
+                <!-- AV부 팀별 진행률 카드 -->
                 <div
-                  class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[35%]"
+                  class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[35%] flex-1 flex flex-col"
                 >
                   <h3 class="font-bold text-slate-800 mb-2">
                     AV부 팀별 진행률
                   </h3>
                   <div class="grid grid-cols-3 gap-4 pt-2">
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart1"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">오디오트러스팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart2"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">사이드스피커팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart3"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">오디오AV데스크팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart4"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">전기팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart5"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">전광판트러스팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart6"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">비디오케이블팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart7"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">비디오AV데스크팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart8"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">무대팀</p>
                     </div>
                     <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
+                      <div class="chart-container h-24 w-24 mx-auto">
                         <canvas id="avTeamProgressChart9"></canvas>
                       </div>
                       <p class="text-xs font-semibold mt-2">IT팀</p>
                     </div>
-                    <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
-                        <canvas id="avTeamProgressChart10"></canvas>
-                      </div>
-                      <p class="text-xs font-semibold mt-2">지원팀</p>
-                    </div>
-                    <div class="text-center">
-                      <div class="chart-container h-20 w-20 mx-auto">
-                        <canvas id="avTeamProgressChart11"></canvas>
-                      </div>
-                      <p class="text-xs font-semibold mt-2">영상팀</p>
-                    </div>
                   </div>
                 </div>
 
-                <!-- AV 지연 작업 목록 -->
+                <!-- AV 지연 작업 목록 카드 -->
                 <div
-                  class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[65%]"
+                  class="bg-white p-6 rounded-lg shadow-sm w-full lg:w-[65%] flex-1 flex flex-col"
                 >
                   <h3 class="font-bold text-slate-800 mb-2">
                     AV부 지연 작업 목록
                   </h3>
                   <div
                     id="delayed-tasks-list-av"
-                    class="space-y-2 text-sm max-h-96 overflow-y-auto pr-1"
+                    class="space-y-2 text-sm flex-1 overflow-y-auto pr-1 max-h-96"
                   ></div>
                 </div>
               </div>

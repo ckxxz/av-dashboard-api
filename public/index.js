@@ -122,13 +122,6 @@ function renderTeamProgressCharts(setupTasks, prefix) {
     completed: setupTasks.filter((t) => t.completed === "완료").length,
   };
 
-  renderDonutChart(
-    `${prefix}OverallProgressChart`,
-    "전체",
-    overall.completed,
-    overall.total
-  );
-
   teams.forEach((team, i) => {
     const canvasId = `${prefix}TeamProgressChart${i + 1}`;
     renderDonutChart(
@@ -174,7 +167,8 @@ function renderDashboard() {
   renderDelayedTasks(db.avsetupTasks, "delayed-tasks-list-av");
   renderDelayedTasks(db.facsetupTasks, "delayed-tasks-list-fac");
 
-  // 음향 상태 요약 & 운영담당자 처리 등은 그대로 유지
+  renderOverallByDaysFor(db.facsetupTasks, "fac");
+  renderOverallByDaysFor(db.avsetupTasks, "av");
 }
 
 // 도넛 중앙 텍스트 플러그인 등록 (최초 1회)
@@ -198,6 +192,52 @@ Chart.register({
     }
   },
 });
+
+function isTaskOnDay(task, dayNumber) {
+  if (!task.start) return false;
+  // 예: "2025. 08. 13 09:00" → day = 13
+  const datePart = task.start.split(" ")[0].replace(/\./g, "-").trim(); // "2025-08-13"
+  const day = parseInt(datePart.split("-")[2], 10);
+  return day === dayNumber;
+}
+
+function renderOverallByDaysFor(setupTasks, prefix) {
+  const day13 = setupTasks.filter((t) => isTaskOnDay(t, 13));
+  const day17 = setupTasks.filter((t) => isTaskOnDay(t, 17));
+
+  const total13 = day13.length;
+  const completed13 = day13.filter((t) => t.completed === "완료").length;
+
+  const total17 = day17.length;
+  const completed17 = day17.filter((t) => t.completed === "완료").length;
+
+  // 디버그
+  console.log(`[${prefix}] 13일 total/completed =>`, total13, completed13);
+  console.log(`[${prefix}] 17일 total/completed =>`, total17, completed17);
+
+  renderDonutChart(
+    `${prefix}13OverallProgressChart`,
+    "사전설치",
+    completed13,
+    total13,
+    {
+      useBlue: true,
+      centerFontSize: 24,
+      cutout: "72%",
+    }
+  );
+  renderDonutChart(
+    `${prefix}17OverallProgressChart`,
+    "철거",
+    completed17,
+    total17,
+    {
+      useBlue: true,
+      centerFontSize: 24,
+      cutout: "72%",
+    }
+  );
+}
 
 function renderDonutChart(canvasId, label, completed, total) {
   const ctx = document.getElementById(canvasId).getContext("2d");
@@ -236,6 +276,49 @@ function renderDonutChart(canvasId, label, completed, total) {
     },
   });
 }
+
+function renderDonutChart(canvasId, label, completed, total, opts = {}) {
+  const ctx = document.getElementById(canvasId).getContext("2d");
+  if (charts[canvasId]) charts[canvasId].destroy();
+
+  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+  const data = total > 0 ? [completed, total - completed] : [0, 1];
+
+  const useBlue = !!opts.useBlue; // 오버롤이면 파랑
+  const completeColor = useBlue ? "#3B82F6" : "#22c55e"; // 파랑 / 기존 초록
+  const restColor = "#e2e8f0";
+
+  charts[canvasId] = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["완료", "미완료"],
+      datasets: [
+        {
+          data,
+          backgroundColor: [completeColor, restColor],
+          borderColor: ["#ffffff"],
+          borderWidth: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "70%",
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        centerText: {
+          text: `${percentage}%`,
+          fontSize: canvasId.toLowerCase().includes("overall") ? 40 : 20, // 대소문자 보정
+          fontWeight: "bold",
+          color: "#334155",
+        },
+      },
+    },
+  });
+}
+
 function renderSetupTable(tab) {
   const isFac = tab === "fac";
   const tableBody = document.getElementById(
