@@ -104,32 +104,39 @@ const timeOptionMap = {
   2: ["9:20", "9:40", "10:20", "1:35", "1:50", "3:20"],
   3: ["9:20", "9:40", "11:05", "1:35", "1:50", "2:55"],
 };
+// 시설부: HTML에 있는 5개 캔버스 순서와 동일해야 함
+const fac_teams_order = ["무대팀", "설비팀", "전기팀", "사무팀", "디자인팀"];
 
-function renderTeamProgressCharts(setupTasks, prefix) {
-  const teams = [...new Set(setupTasks.map((t) => t.team))];
-  const teamProgress = {};
+// AV부: HTML 9개 순서
+const av_teams_order = [
+  "오디오트러스팀",
+  "사이드스피커팀",
+  "오디오AV데스크팀",
+  "전기팀",
+  "전광판트러스팀",
+  "비디오케이블팀",
+  "비디오AV데스크팀",
+  "무대팀",
+  "IT팀",
+];
 
-  teams.forEach((team) => {
-    const teamTasks = setupTasks.filter((t) => t.team === team);
-    teamProgress[team] = {
-      total: teamTasks.length,
-      completed: teamTasks.filter((t) => t.completed === "완료").length,
-    };
-  });
-
-  const overall = {
-    total: setupTasks.length,
-    completed: setupTasks.filter((t) => t.completed === "완료").length,
-  };
-
-  teams.forEach((team, i) => {
+function renderTeamProgressChartsFixed(setupTasks, prefix, teamsOrder) {
+  teamsOrder.forEach((teamName, i) => {
     const canvasId = `${prefix}TeamProgressChart${i + 1}`;
-    renderDonutChart(
-      canvasId,
-      team,
-      teamProgress[team].completed,
-      teamProgress[team].total
-    );
+    const el = document.getElementById(canvasId);
+    if (!el) {
+      console.warn(
+        `[renderTeamProgressChartsFixed] #${canvasId} not found. Skip.`
+      );
+      return;
+    }
+
+    const teamTasks = setupTasks.filter((t) => t.team === teamName);
+    const total = teamTasks.length; // 0이면 그대로 0으로
+    const completed = teamTasks.filter((t) => t.completed === "완료").length;
+
+    // total=0 이면 renderDonutChart가 0%로 표시(분모 0 방지 로직 이미 포함)
+    renderDonutChart(canvasId, teamName, completed, total);
   });
 }
 
@@ -139,10 +146,13 @@ function renderDelayedTasks(setupTasks, containerId) {
   delayedTasksList.innerHTML = "";
 
   const delayedTasks = setupTasks.filter((task) => {
-    if (!task.start) return false;
-    const startTime = new Date(task.start);
-    const endTime = new Date(startTime.getTime() + task.duration * 60000);
-    return task.completed !== "완료" && now > endTime;
+    if (!task.start || !task.duration) return false;
+    const startTime = new Date(task.start.replace(/\s/g, "T"));
+    if (isNaN(startTime)) return false;
+    const endTime = new Date(
+      startTime.getTime() + (parseInt(task.duration) || 0) * 60000
+    );
+    return task.completed !== "완료" && !isNaN(endTime) && new Date() > endTime;
   });
 
   if (delayedTasks.length > 0) {
@@ -161,8 +171,8 @@ function renderDelayedTasks(setupTasks, containerId) {
 }
 
 function renderDashboard() {
-  renderTeamProgressCharts(db.avsetupTasks, "av");
-  renderTeamProgressCharts(db.facsetupTasks, "fac");
+  renderTeamProgressChartsFixed(db.facsetupTasks, "fac", fac_teams_order);
+  renderTeamProgressChartsFixed(db.avsetupTasks, "av", av_teams_order);
 
   renderDelayedTasks(db.avsetupTasks, "delayed-tasks-list-av");
   renderDelayedTasks(db.facsetupTasks, "delayed-tasks-list-fac");
@@ -193,11 +203,20 @@ Chart.register({
   },
 });
 
+function normalizeDateOnly(str) {
+  // "2025. 08. 13 09:00" / "2025-08-13 09:00" -> "2025-08-13"
+  if (!str) return "";
+  const datePart = str
+    .split(" ")[0]
+    .replace(/\./g, "-")
+    .replace(/\s+/g, "")
+    .replace(/-$/, "");
+  return datePart; // "2025-08-13"
+}
 function isTaskOnDay(task, dayNumber) {
   if (!task.start) return false;
-  // 예: "2025. 08. 13 09:00" → day = 13
-  const datePart = task.start.split(" ")[0].replace(/\./g, "-").trim(); // "2025-08-13"
-  const day = parseInt(datePart.split("-")[2], 10);
+  const dateOnly = normalizeDateOnly(task.start); // "2025-08-13"
+  const day = parseInt(dateOnly.split("-")[2], 10);
   return day === dayNumber;
 }
 
@@ -237,44 +256,6 @@ function renderOverallByDaysFor(setupTasks, prefix) {
       cutout: "72%",
     }
   );
-}
-
-function renderDonutChart(canvasId, label, completed, total) {
-  const ctx = document.getElementById(canvasId).getContext("2d");
-  if (charts[canvasId]) charts[canvasId].destroy();
-
-  const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
-  const data = total > 0 ? [completed, total - completed] : [0, 1];
-
-  charts[canvasId] = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      labels: ["완료", "미완료"],
-      datasets: [
-        {
-          data: data,
-          backgroundColor: ["#22c55e", "#e2e8f0"],
-          borderColor: ["#ffffff"],
-          borderWidth: 2,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: "70%",
-      plugins: {
-        legend: { display: false },
-        tooltip: { enabled: false },
-        centerText: {
-          text: `${percentage}%`,
-          fontSize: canvasId.includes("overall") ? 40 : 20,
-          fontWeight: "bold",
-          color: "#334155",
-        },
-      },
-    },
-  });
 }
 
 function renderDonutChart(canvasId, label, completed, total, opts = {}) {
@@ -380,49 +361,66 @@ function renderSetupTable(tab) {
     tr.className = `task-row border-b border-slate-200 hover:bg-slate-50 ${rowClass}`;
 
     tr.innerHTML = `
-            <td class="p-3 align-middle whitespace-nowrap">
-              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">
-                ${task.team}
-              </span>
-            </td>
-            <td class="p-4 text-center align-middle whitespace-nowrap">
-              <button data-task-id="${
-                task.id
-              }" class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
-      statusColorMap[status] || "bg-gray-300"
-    }">${status}</button>
-            </td>
-            <td
-                class="p-3 font-semibold task-name align-middle whitespace-nowrap"
-            >
-              ${task.task}
-            </td>
-            <td class="p-3 text-center align-middle whitespace-nowrap">
-              ${
-                task.memo && task.memo.trim() !== ""
-                  ? `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 있음">📌</button>`
-                  : `<button onclick="openMemoPopup('fac', ${task.id})" title="메모 없음" class="opacity-10">📌</button>`
-              }
-            </td>
-            <td class="p-3 align-middle whitespace-nowrap">${task.person}</td>
-            <td class="p-3 align-middle text-sm whitespace-nowrap">${
-              startTime && !isNaN(startTime)
-                ? startTime.toLocaleString("ko-KR", formatOptions)
-                : "미정"
-            }</td>
-            <td class="p-3 align-middle text-sm whitespace-nowrap">${
-              endTime && !isNaN(endTime)
-                ? endTime.toLocaleString("ko-KR", formatOptions)
-                : "미정"
-            }</td>
-            <td class="p-3 text-center align-middle whitespace-nowrap">
-              ${
-                task.link && task.link.trim() !== ""
-                  ? `<a href="${task.link}" target="_blank" class="inline-block text-blue-600 underline font-semibold hover:text-blue-800">링크</a>`
-                  : ""
-              }
-            </td>
-          `;
+        <td class="p-3 align-middle whitespace-nowrap">
+          <span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">${
+            task.team
+          }</span>
+        </td>
+  
+        <td class="p-4 text-center align-middle whitespace-nowrap">
+          <button
+            data-task-id="${task.id}"
+            data-tab="${isFac ? "fac" : "av"}"
+            class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
+              statusColorMap[status] || "bg-gray-300"
+            }">
+            ${status}
+          </button>
+        </td>
+  
+        <td class="p-3 font-semibold task-name align-middle whitespace-nowrap">
+          ${task.task}
+        </td>
+  
+        <td class="p-3 text-center align-middle whitespace-nowrap">
+          ${
+            task.memo && task.memo.trim() !== ""
+              ? `<button onclick="openMemoPopup('${isFac ? "fac" : "av"}', ${
+                  task.id
+                })" title="메모 있음">📌</button>`
+              : `<button onclick="openMemoPopup('${isFac ? "fac" : "av"}', ${
+                  task.id
+                })" title="메모 없음" class="opacity-10">📌</button>`
+          }
+        </td>
+  
+        <td class="p-3 align-middle whitespace-nowrap">${task.person || ""}</td>
+  
+        <td class="p-3 align-middle text-sm whitespace-nowrap">
+          ${
+            startTime && !isNaN(startTime)
+              ? startTime.toLocaleString("ko-KR", formatOptions)
+              : "미정"
+          }
+        </td>
+  
+        <td class="p-3 align-middle text-sm whitespace-nowrap">
+          ${
+            endTime && !isNaN(endTime)
+              ? endTime.toLocaleString("ko-KR", formatOptions)
+              : "미정"
+          }
+        </td>
+  
+        <td class="p-3 text-center align-middle whitespace-nowrap">
+          ${
+            task.link && task.link.trim() !== ""
+              ? `<a href="${task.link}" target="_blank" class="inline-block text-blue-600 underline font-semibold hover:text-blue-800">링크</a>`
+              : ""
+          }
+        </td>
+      `;
+
     tableBody.appendChild(tr);
   });
 }
@@ -457,77 +455,50 @@ async function updateTaskStatus(taskId, tab = "fac") {
 }
 
 let currentMemoTab = null;
-let currentMemoIndex = null;
+let currentMemoTaskId = null;
 
-function openMemoPopup(tab, index) {
+function openMemoPopup(tab, taskId) {
   currentMemoTab = tab;
-  currentMemoIndex = index;
+  currentMemoTaskId = taskId;
 
   const setupTasks = tab === "fac" ? db.facsetupTasks : db.avsetupTasks;
-  const task = setupTasks[index];
+  const task = setupTasks.find((t) => t.id == taskId);
 
-  document.getElementById("memo-textarea").value = task.memo || "";
+  document.getElementById("memo-textarea").value = task?.memo || "";
   document.getElementById("memo-popup").classList.remove("hidden");
 }
 
 function closeMemoPopup() {
   document.getElementById("memo-popup").classList.add("hidden");
   currentMemoTab = null;
-  currentMemoIndex = null;
+  currentMemoTaskId = null;
 }
 
-function saveMemo() {
+async function saveMemo() {
   const memo = document.getElementById("memo-textarea").value.trim();
+  if (!currentMemoTab || currentMemoTaskId == null) return;
 
-  if (currentMemoTab !== null && currentMemoIndex !== null) {
-    const setupTasks =
-      currentMemoTab === "fac" ? db.facsetupTasks : db.avsetupTasks;
-    setupTasks[currentMemoIndex].memo = memo;
+  const setupTasks =
+    currentMemoTab === "fac" ? db.facsetupTasks : db.avsetupTasks;
+  const task = setupTasks.find((t) => t.id == currentMemoTaskId);
+  if (!task) return;
 
-    // ✅ UI 업데이트
-    renderSetupTable(currentMemoTab);
-
-    // TODO: 실제 서버/스프레드시트에 저장하는 로직 필요
-    saveMemo();
-    closeMemoPopup();
-  }
-}
-
-function saveMemo() {
-  const memo = document.getElementById("memo-textarea").value.trim();
-
-  if (currentMemoTab !== null && currentMemoIndex !== null) {
-    const setupTasks =
-      currentMemoTab === "fac" ? db.facsetupTasks : db.avsetupTasks;
-    const task = setupTasks[currentMemoIndex];
-
-    task.memo = memo; // UI용 db에도 반영
-
-    // ✅ 서버에 저장
-    fetch("/api/updateMemo", {
+  // 서버 저장
+  try {
+    const res = await fetch("/api/updateMemo", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        taskId: task.id, // 반드시 스프레드시트의 ID 값이여야 함
-        memo: memo,
-        tab: currentMemoTab, // "fac" 또는 "av"
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("서버 응답 오류");
-        return res.json();
-      })
-      .then((data) => {
-        console.log("✅ 메모 저장 성공:", data.message);
-        renderSetupTable(currentMemoTab);
-        closeMemoPopup();
-      })
-      .catch((err) => {
-        console.error("❌ 메모 저장 실패:", err);
-        alert("메모 저장에 실패했습니다.");
-      });
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: task.id, memo, tab: currentMemoTab }),
+    });
+    if (!res.ok) throw new Error("서버 응답 오류");
+
+    // 로컬 반영 + UI 갱신
+    task.memo = memo;
+    renderSetupTable(currentMemoTab);
+    closeMemoPopup();
+  } catch (err) {
+    console.error("❌ 메모 저장 실패:", err);
+    alert("메모 저장에 실패했습니다.");
   }
 }
 
@@ -1052,7 +1023,7 @@ window.onload = async () => {
       const btn = e.target.closest(".status-chip");
       if (!btn) return;
       const taskId = parseInt(btn.dataset.taskId);
-      updateTaskStatus(taskId);
+      updateTaskStatus(taskId, "fac");
     });
 
   document
@@ -1061,7 +1032,7 @@ window.onload = async () => {
       const btn = e.target.closest(".status-chip");
       if (!btn) return;
       const taskId = parseInt(btn.dataset.taskId);
-      updateTaskStatus(taskId);
+      updateTaskStatus(taskId, "av");
     });
 
   document.querySelector("nav").addEventListener("click", handleNavClick);

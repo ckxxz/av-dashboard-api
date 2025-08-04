@@ -126,6 +126,7 @@
     </style>
   </head>
   <body class="bg-slate-50 text-slate-800">
+    <!-- 로딩 오버레이 -->
     <div
       id="loading-overlay"
       class="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50"
@@ -160,20 +161,22 @@
     <div class="container mx-auto p-4 md:p-6">
       <header class="mb-6 flex justify-between items-center">
         <div>
-          <h1 class="text-2xl font-bold text-slate-900">사전설치 공정표</h1>
+          <h1 class="text-2xl font-bold text-slate-900">
+            AV부 사전설치 체크리스트 (자원봉사자용)
+          </h1>
           <p class="text-slate-600 mt-1">
-            담당하는 작업을 확인하고, 완료 시 체크박스를 선택해주세요.
+            담당 작업을 확인하고, 진행 상태와 메모를 관리하세요.
           </p>
         </div>
         <button
           id="refresh-button"
           class="p-2 rounded-full hover:bg-slate-200 active:bg-slate-300 transition-colors"
+          aria-label="새로고침"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="24"
             height="24"
-            viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             stroke-width="2"
@@ -190,182 +193,335 @@
       </header>
 
       <main>
-        <div id="team-filter-controls" class="mb-4 flex space-x-2">
-          <button
-            data-team="All"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md active"
+        <!-- 날짜 필터 -->
+        <div id="date-filter-controls" class="mb-2">
+          <span class="text-sm text-slate-700 whitespace-nowrap"
+            >날짜를 선택해주세요.</span
           >
-            전체
-          </button>
-          <button
-            data-team="오디오팀"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
+          <select
+            id="date-filter"
+            class="px-3 py-1 text-sm rounded-md border border-gray-300"
           >
-            오디오팀
-          </button>
-          <button
-            data-team="비디오팀"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-          >
-            비디오팀
-          </button>
-          <button
-            data-team="무대팀"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-          >
-            무대팀
-          </button>
-          <button
-            data-team="IT팀"
-            class="filter-btn px-3 py-1 text-sm font-semibold rounded-md"
-          >
-            IT팀
-          </button>
+            <option value="All">전체 날짜</option>
+            <option value="2025-08-13">2025년 8월 13일</option>
+            <option value="2025-08-14">2025년 8월 14일</option>
+            <option value="2025-08-15">2025년 8월 15일</option>
+            <option value="2025-08-16">2025년 8월 16일</option>
+            <option value="2025-08-17">2025년 8월 17일</option>
+          </select>
         </div>
+
+        <!-- 팀 필터 -->
+        <div id="team-filter-controls" class="mb-4 overflow-x-auto">
+          <div class="flex space-x-2 w-max min-w-full flex-nowrap">
+            <button
+              data-team="All"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md active min-w-fit"
+            >
+              전체
+            </button>
+            <button
+              data-team="오디오트러스팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              오디오트러스팀
+            </button>
+            <button
+              data-team="사이드스피커팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              사이드스피커팀
+            </button>
+            <button
+              data-team="오디오AV데스크팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              오디오AV데스크팀
+            </button>
+            <button
+              data-team="전기팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              전기팀
+            </button>
+            <button
+              data-team="전광판트러스팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              전광판트러스팀
+            </button>
+            <button
+              data-team="비디오케이블팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              비디오케이블팀
+            </button>
+            <button
+              data-team="비디오AV데스크팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              비디오AV데스크팀
+            </button>
+            <button
+              data-team="무대팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              무대팀
+            </button>
+            <button
+              data-team="IT팀"
+              class="filter-btn team-filter-btn px-3 py-1 text-sm font-semibold rounded-md min-w-fit"
+            >
+              IT팀
+            </button>
+          </div>
+        </div>
+
+        <!-- 테이블 -->
         <div class="bg-white rounded-lg shadow-sm overflow-x-auto">
           <table class="w-full text-sm text-left">
             <thead class="bg-slate-100 text-slate-600">
               <tr>
-                <th class="p-3 w-16 text-center">완료</th>
+                <th class="p-3">팀</th>
+                <th class="p-3 text-center">상태</th>
                 <th class="p-3">작업 항목</th>
+                <th class="p-3 text-center min-w-[64px]">메모</th>
                 <th class="p-3">담당자</th>
                 <th class="p-3">시작 예정</th>
                 <th class="p-3">완료 목표</th>
-                <th class="p-3">팀</th>
+                <th class="p-3 min-w-[64px]">자료</th>
               </tr>
             </thead>
-
             <tbody id="worker-tasks-table">
-              <!-- Tasks will be populated by JS -->
+              <!-- rows -->
             </tbody>
           </table>
         </div>
       </main>
     </div>
 
+    <!-- 메모 팝업 -->
+    <div
+      id="memo-popup"
+      class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden"
+    >
+      <div class="bg-white p-6 rounded shadow-lg w-[90%] max-w-md">
+        <h2 class="text-lg font-semibold mb-2">메모</h2>
+        <textarea
+          id="memo-textarea"
+          class="w-full h-32 p-2 border rounded"
+        ></textarea>
+        <div class="flex justify-end mt-4 space-x-2">
+          <button
+            onclick="closeMemoPopup()"
+            class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
+          >
+            닫기
+          </button>
+          <button
+            onclick="saveMemo()"
+            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            저장
+          </button>
+        </div>
+      </div>
+    </div>
+
     <script>
+      // --- 공통 상수 (fac와 동일) ---
+      const statusOrder = ["대기", "진행중", "완료", "문제", "보류"];
+      const statusColorMap = {
+        대기: "bg-gray-400",
+        진행중: "bg-blue-500",
+        완료: "bg-green-500",
+        문제: "bg-red-500",
+        보류: "bg-yellow-500",
+      };
+
       let tasks = [];
       let currentFilter = "All";
+      let currentDateFilter = "All";
 
+      // --- 데이터 로드 ---
       async function fetchData() {
-        try {
-          const response = await fetch("/api/avSetupTasks");
-          if (!response.ok) throw new Error("Failed to fetch tasks");
-          const data = await response.json();
-          tasks = data.map((d) => ({
-            ...d,
-            id: parseInt(d.id),
-            completed: d.completed
-              ? d.completed.toUpperCase() === "TRUE"
-              : false,
-          }));
-        } catch (error) {
-          console.error("Error loading data:", error);
-          alert("데이터를 불러오는 데 실패했습니다.");
-        }
+        const res = await fetch("/api/avSetupTasks");
+        if (!res.ok) throw new Error("Failed to fetch avSetupTasks");
+        const data = await res.json();
+        // completed 필드 문자열 기반 정규화 (fac와 동일 스키마 가정)
+        tasks = data.map((d) => ({
+          ...d,
+          id: parseInt(d.id),
+          completed: (d.completed || "대기").trim(), // "대기"/"진행중"/"완료"/...
+        }));
       }
 
-      async function updateTaskStatus(taskId, isCompleted) {
-        try {
-          const response = await fetch("/api/updateTask", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              taskId,
-              completed: nextStatus,
-              sheetName: tab === "fac" ? "facSetupTasks" : "avSetupTasks", // 시트 이름 명시
-            }),
-          });
-          if (!response.ok) {
-            throw new Error("Failed to update task status");
-          }
-          // Update local data to reflect change immediately
-          const task = tasks.find((t) => t.id === taskId);
-          if (task) task.completed = isCompleted;
-          renderTasks();
-        } catch (error) {
-          console.error("Error updating task:", error);
-          alert("상태 업데이트에 실패했습니다. 잠시 후 다시 시도해주세요.");
-          // Revert checkbox state on failure
-          const task = tasks.find((t) => t.id === taskId);
-          if (task) task.completed = !isCompleted;
-          renderTasks();
+      // --- 상태 토글 (fac와 동일 UX) ---
+      async function updateTaskStatus(taskId) {
+        const task = tasks.find((t) => t.id === taskId);
+        if (!task) return;
+        const currentIndex = statusOrder.indexOf(task.completed);
+        const nextStatus = statusOrder[(currentIndex + 1) % statusOrder.length];
+
+        const res = await fetch("/api/updateTask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskId,
+            completed: nextStatus,
+            sheetName: "avSetupTasks", // ✅ AV 시트 지정
+          }),
+        });
+        if (!res.ok) {
+          alert("상태 업데이트 실패");
+          return;
         }
+        task.completed = nextStatus;
+        renderTasks();
       }
 
+      // --- 렌더 ---
       function renderTasks() {
-        const tableBody = document.getElementById("worker-tasks-table");
-        tableBody.innerHTML = "";
-        const filteredTasks = tasks.filter(
-          (task) => currentFilter === "All" || task.team === currentFilter
-        );
+        const tbody = document.getElementById("worker-tasks-table");
+        tbody.innerHTML = "";
 
-        filteredTasks.forEach((task) => {
+        const filtered = tasks.filter((task) => {
+          const teamOk = currentFilter === "All" || task.team === currentFilter;
+          let dateOk = true;
+          if (currentDateFilter !== "All" && task.start) {
+            const taskDate = task.start
+              .split(" ")[0]
+              .replace(/\./g, "-")
+              .trim();
+            dateOk = taskDate === currentDateFilter;
+          }
+          return teamOk && dateOk;
+        });
+
+        const fmt = {
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        };
+
+        filtered.forEach((task) => {
           const tr = document.createElement("tr");
-          tr.className = `task-row border-b border-slate-200 ${
-            task.completed ? "completed" : ""
-          }`;
+          tr.className = "task-row border-b border-slate-200";
 
-          // 시작 시간과 완료 목표 시간 계산
           const startTime = task.start
             ? new Date(task.start.replace(/\s/g, "T"))
             : null;
           const endTime =
             startTime && task.duration
-              ? new Date(startTime.getTime() + parseInt(task.duration) * 60000)
+              ? new Date(startTime.getTime() + task.duration * 60000)
               : null;
 
-          // 날짜 포맷팅 옵션
-          const formatOptions = {
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: false,
-          };
-
           tr.innerHTML = `
-                    <td class="p-4 text-center align-middle">
-                        <input type="checkbox" data-task-id="${
-                          task.id
-                        }" class="h-8 w-8 rounded-lg border-gray-400 text-blue-600 focus:ring-blue-600 focus:ring-2 cursor-pointer" ${
-            task.completed ? "checked" : ""
-          }>
-                    </td>
-                    <td class="p-3 font-semibold task-name align-middle">${
-                      task.task
-                    }</td>
-                    <td class="p-3 align-middle">${task.person}</td>
-                    <td class="p-3 align-middle text-sm">${
-                      startTime && !isNaN(startTime)
-                        ? startTime.toLocaleString("ko-KR", formatOptions)
-                        : "미정"
-                    }</td>
-                    <td class="p-3 align-middle text-sm">${
-                      endTime && !isNaN(endTime)
-                        ? endTime.toLocaleString("ko-KR", formatOptions)
-                        : "미정"
-                    }</td>
-                    <td class="p-3 align-middle"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">${
-                      task.team
-                    }</span></td>
-                `;
-          tableBody.appendChild(tr);
+            <td class="p-3 align-middle whitespace-nowrap">
+              <span class="px-2 py-1 text-xs font-semibold rounded-full bg-slate-200 text-slate-700">${
+                task.team || ""
+              }</span>
+            </td>
+            <td class="p-4 text-center align-middle whitespace-nowrap">
+              <button data-task-id="${
+                task.id
+              }" class="status-chip px-2 py-1 rounded-full text-white text-xs font-semibold ${
+            statusColorMap[task.completed] || "bg-gray-300"
+          }">
+                ${task.completed}
+              </button>
+            </td>
+            <td class="p-3 font-semibold task-name align-middle whitespace-nowrap">
+              ${task.task || ""}
+            </td>
+            <td class="p-3 text-center align-middle whitespace-nowrap">
+              ${
+                task.memo && task.memo.trim() !== ""
+                  ? `<button onclick="openMemoPopup('av', ${task.id})" title="메모 있음">📌</button>`
+                  : `<button onclick="openMemoPopup('av', ${task.id})" title="메모 없음" class="opacity-10">📌</button>`
+              }
+            </td>
+            <td class="p-3 align-middle whitespace-nowrap">${
+              task.person || ""
+            }</td>
+            <td class="p-3 align-middle text-sm whitespace-nowrap">
+              ${
+                startTime && !isNaN(startTime)
+                  ? startTime.toLocaleString("ko-KR", fmt)
+                  : "미정"
+              }
+            </td>
+            <td class="p-3 align-middle text-sm whitespace-nowrap">
+              ${
+                endTime && !isNaN(endTime)
+                  ? endTime.toLocaleString("ko-KR", fmt)
+                  : "미정"
+              }
+            </td>
+            <td class="p-3 text-center align-middle whitespace-nowrap">
+              ${
+                task.link
+                  ? `<a href="${task.link}" target="_blank" class="inline-block text-blue-600 underline font-semibold hover:text-blue-800">링크</a>`
+                  : ""
+              }
+            </td>
+          `;
+          tbody.appendChild(tr);
         });
       }
+
+      // --- 로딩/갱신 ---
       async function refreshData() {
-        const loadingOverlay = document.getElementById("loading-overlay");
-        loadingOverlay.style.display = "flex";
-        loadingOverlay.style.opacity = "1";
-        await fetchData();
-        renderTasks();
-        loadingOverlay.style.opacity = "0";
-        setTimeout(() => (loadingOverlay.style.display = "none"), 300);
+        const overlay = document.getElementById("loading-overlay");
+        overlay.style.display = "flex";
+        overlay.style.opacity = "1";
+        try {
+          await fetchData();
+          renderTasks();
+        } finally {
+          overlay.style.opacity = "0";
+          setTimeout(() => (overlay.style.display = "none"), 300);
+        }
       }
 
+      // --- 메모 팝업 로직 (fac 동일) ---
+      let currentMemoTaskId = null;
+
+      function openMemoPopup(tab, taskId) {
+        currentMemoTaskId = taskId;
+        const task = tasks.find((t) => t.id === taskId);
+        document.getElementById("memo-textarea").value = task?.memo || "";
+        document.getElementById("memo-popup").classList.remove("hidden");
+      }
+      function closeMemoPopup() {
+        document.getElementById("memo-popup").classList.add("hidden");
+        currentMemoTaskId = null;
+      }
+      async function saveMemo() {
+        const memo = document.getElementById("memo-textarea").value.trim();
+        if (!currentMemoTaskId) return;
+        const res = await fetch("/api/updateMemo", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId: currentMemoTaskId, memo, tab: "av" }), // ✅ AV
+        });
+        if (!res.ok) {
+          alert("메모 저장 실패");
+          return;
+        }
+        const t = tasks.find((x) => x.id === currentMemoTaskId);
+        if (t) t.memo = memo;
+        closeMemoPopup();
+        renderTasks();
+      }
+
+      // --- 초기화 ---
       window.onload = async () => {
         await refreshData();
 
+        // 팀 필터
         document
           .getElementById("team-filter-controls")
           .addEventListener("click", (e) => {
@@ -379,15 +535,25 @@
             renderTasks();
           });
 
+        // 상태 변경
         document
           .getElementById("worker-tasks-table")
-          .addEventListener("change", (e) => {
-            if (e.target.type !== "checkbox") return;
-            const taskId = parseInt(e.target.dataset.taskId);
-            const isCompleted = e.target.checked;
-            updateTaskStatus(taskId, isCompleted);
+          .addEventListener("click", (e) => {
+            const btn = e.target.closest(".status-chip");
+            if (!btn) return;
+            const taskId = parseInt(btn.dataset.taskId);
+            updateTaskStatus(taskId);
           });
 
+        // 날짜 필터
+        document
+          .getElementById("date-filter")
+          .addEventListener("change", (e) => {
+            currentDateFilter = e.target.value;
+            renderTasks();
+          });
+
+        // 새로고침
         document
           .getElementById("refresh-button")
           .addEventListener("click", refreshData);
