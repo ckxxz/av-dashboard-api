@@ -783,92 +783,83 @@ function renderTrendChart(data) {
   });
 }
 
-function renderTimetableCalendar() {
-  const calendarEl = document.getElementById("calendar");
+function renderTimetableCalendar(selectedDate = "2025-08-13") {
+  const container = document.getElementById("timetable-container");
+  container.innerHTML = ""; // 초기화
 
-  if (calendar) calendar.destroy(); // 재렌더링 시 파괴
+  const partColors = {
+    "시설부 무대설치A팀": "#3B82F6",
+    "시설부 무대설치B팀": "#60A5FA",
+    "시설부 전기팀": "#93C5FD",
+    "시설부 설비팀": "#BFDBFE",
+    "시설부 간판팀": "#2563EB",
+    "AV부 오디오트러스팀": "#EF4444",
+    "AV부 사이드스피커팀": "#F97316",
+    "AV부 오디오AV데스크팀": "#F59E0B",
+    "AV부 전기팀": "#EA580C",
+    "AV부 전광판트러스팀": "#C026D3",
+    "AV부 비디오케이블팀": "#A21CAF",
+    "AV부 비디오AV데스크팀": "#DB2777",
+    "AV부 무대팀": "#E11D48",
+    "AV부 IT팀": "#DC2626",
+  };
 
-  const events = db.timetable.map((slot) => {
-    const [startTime, endTime] = slot.time.split("-").map((t) => t.trim());
+  // ⬇️ 날짜 필터 적용
+  const filtered = db.timetable.filter((item) => item.date === selectedDate);
 
-    let bgColor = "#9CA3AF"; // 기본 회색
-    if (slot.part === "시설부") bgColor = "#3B82F6"; // 파랑
-    else if (slot.part === "AV부") bgColor = "#EF4444"; // 빨강
-    else if (slot.part === "청소부") bgColor = "#10B981"; // 초록
-    else if (slot.part === "안내부") bgColor = "#F59E0B"; // 주황
-
-    return {
-      start: `${slot.date}T${startTime}`,
-      end: `${slot.date}T${endTime}`,
-      extendedProps: { ...slot },
-      backgroundColor: bgColor,
-      borderColor: "transparent",
-      textColor: "white",
-    };
-  });
-
-  const startDate = db.timetable.length
-    ? db.timetable.reduce(
-        (earliest, item) => (item.date < earliest ? item.date : earliest),
-        db.timetable[0].date
-      )
-    : new Date().toISOString().split("T")[0];
-
-  calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: "customThreeDay",
-    initialDate: startDate,
-    locale: "ko",
-    headerToolbar: {
-      left: "prev,next today",
-      center: "title",
-      right: "timeGridDay,customThreeDay,customFiveDay",
-    },
-    buttonText: {
-      today: "오늘",
-      prev: "이전",
-      next: "다음",
-      timeGridDay: "1일",
-    },
-    views: {
-      customThreeDay: {
-        type: "timeGrid",
-        duration: { days: 3 },
-        buttonText: "3일",
-      },
-      customFiveDay: {
-        type: "timeGrid",
-        duration: { days: 5 },
-        buttonText: "5일",
-      },
-    },
-    allDaySlot: false,
-    slotMinTime: "06:00:00",
-    slotMaxTime: "20:00:00",
-    events,
-    eventClick: (info) => {
-      const { part, task, assignee, time } = info.event.extendedProps;
-      alert(
-        `부서: ${part}\n작업내용: ${task}\n담당자: ${assignee}\n시간: ${time}`
+  const teams = Object.keys(partColors);
+  const times = Array.from(new Set(filtered.map((item) => item.time))).sort(
+    (a, b) => {
+      return (
+        new Date("1970-01-01T" + a.split(" - ")[0]) -
+        new Date("1970-01-01T" + b.split(" - ")[0])
       );
-    },
-    // ✅ 시간까지 포함한 커스텀 이벤트 출력
-    eventContent: function (arg) {
-      const { part, task, assignee, time } = arg.event.extendedProps;
+    }
+  );
 
-      return {
-        html: `
-    <div style="font-weight:bold; font-size:14px; margin-top:1px;">
-      ${time} ${part} (${assignee})
-    </div>
-    <div style="font-size:14px; margin-top:2px;">
-      ${task}
-    </div>
-  `,
-      };
-    },
+  const cellMap = {};
+  filtered.forEach(({ time, part, task }) => {
+    if (!cellMap[time]) cellMap[time] = {};
+    cellMap[time][part] = task;
   });
 
-  calendar.render();
+  const gridTemplate = `grid grid-cols-[120px_repeat(${teams.length},minmax(140px,1fr))] border text-sm w-fit`;
+  const grid = document.createElement("div");
+  grid.className = gridTemplate;
+
+  grid.appendChild(createCell("시간", true, true));
+  teams.forEach((team) => grid.appendChild(createCell(team, true)));
+
+  times.forEach((time) => {
+    grid.appendChild(createCell(time, false, true));
+    teams.forEach((team) => {
+      const task = cellMap[time]?.[team] || "";
+      const color = partColors[team] || "#E5E7EB";
+      const cell = createCell(task);
+      if (task) {
+        cell.style.backgroundColor = color;
+        cell.style.color = "white";
+        cell.style.fontWeight = "500";
+        cell.style.borderRadius = "4px";
+        cell.style.whiteSpace = "pre-line";
+      }
+      grid.appendChild(cell);
+    });
+  });
+
+  container.appendChild(grid);
+
+  function createCell(content, isHeader = false, isSticky = false) {
+    const div = document.createElement("div");
+    div.textContent = content;
+    div.className = `p-2 border border-gray-300 ${
+      isHeader ? "bg-gray-100 font-bold text-center" : "bg-white"
+    }`;
+    if (isSticky) {
+      div.classList.add("sticky", "left-0", "z-10", "bg-white");
+    }
+    return div;
+  }
 }
 
 function renderSoundSummary() {
@@ -877,91 +868,55 @@ function renderSoundSummary() {
   const dailyEl = document.getElementById("daily-avg-summary");
   const titleEl = document.getElementById("sound-summary-title");
 
-  if (!Array.isArray(db.soundData) || db.soundData.length === 0) {
-    avgEl.textContent = "N/A";
-    alertEl.textContent = "N/A";
-    dailyEl.textContent = "N/A";
-    return;
-  }
-
-  // 이벤트 시작일(최소 날짜) 기준으로 오늘이 몇째날인지 추정 (1~3 범위로 clamp)
-  const allDates = (db.timetable || [])
-    .map((s) => s.date)
-    .filter(Boolean)
-    .sort();
-  let currentDayIdx = 1;
-  if (allDates.length) {
-    const start = new Date(allDates[0] + "T00:00:00");
-    const today = new Date();
-    const diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1;
-    currentDayIdx = Math.min(3, Math.max(1, diffDays));
-  }
   const now = new Date();
-  const nowMin = now.getHours() * 60 + now.getMinutes();
 
-  // 정렬 가능한 키(일차, 분)로 변환
-  const ranked = db.soundData
-    .map((r) => {
-      const d = parseDayLabel(r.Time);
-      const t = parseTimeLabel(r.Time);
-      const [h, m] = t ? t.split(":").map(Number) : [0, 0];
-      return { ...r, _day: d || 0, _min: (h || 0) * 60 + (m || 0) };
+  const enriched = db.soundData
+    .map((row) => {
+      const parsedTime = parseTimeToDateObject(row.Time);
+      return parsedTime ? { ...row, parsedTime } : null;
     })
-    .filter((r) => r._day > 0)
-    .sort((a, b) => (a._day === b._day ? a._min - b._min : a._day - b._day));
+    .filter(Boolean)
+    .sort((a, b) => a.parsedTime - b.parsedTime);
 
-  if (!ranked.length) {
-    avgEl.textContent = "N/A";
-    alertEl.textContent = "N/A";
-    dailyEl.textContent = "N/A";
+  if (!enriched.length) {
+    avgEl.textContent = alertEl.textContent = dailyEl.textContent = "N/A";
     return;
   }
 
-  // 가장 가까운 슬롯 찾기(미래 우선, 없으면 가장 최근 과거)
-  let target = null;
-  for (const r of ranked) {
-    if (
-      r._day > currentDayIdx ||
-      (r._day === currentDayIdx && r._min >= nowMin)
-    ) {
-      target = r;
-      break;
-    }
-  }
-  if (!target) target = ranked[ranked.length - 1];
+  // 현재 이후 중 가장 가까운 값, 없으면 마지막 값
+  let target = enriched.find((r) => r.parsedTime > now);
+  if (!target) target = enriched[enriched.length - 1];
 
-  // 동일한 Time(문자열)로 묶어 현재 평균/경고 계산
-  const bucket = ranked.filter((r) => r.Time === target.Time);
-  const values = bucket
-    .map((r) => parseFloat(r.dB))
-    .filter((x) => Number.isFinite(x));
+  // target 기준 Time을 기준으로 평균, 경고 계산
+  const group = enriched.filter((r) => r.Time === target.Time);
+  const dbValues = group.map((r) => parseFloat(r.dB)).filter(Number.isFinite);
 
-  const currentAvg = values.length
-    ? values.reduce((a, b) => a + b, 0) / values.length
+  const currentAvg = dbValues.length
+    ? dbValues.reduce((a, b) => a + b, 0) / dbValues.length
     : NaN;
-  const currentAlerts = bucket.filter((r) => parseFloat(r.dB) > 85).length;
+  const alerts = group.filter((r) => parseFloat(r.dB) > 85).length;
 
-  // 해당 일차의 일일 평균
-  const dayAll = ranked.filter((r) => r._day === target._day);
-  const dayVals = dayAll
+  const dayLabel = target.Time.split(" - ")[0];
+  const timeLabel = target.Time.match(/\d{1,2}:\d{2}/)?.[0] || "";
+
+  // 일일 평균 계산
+  const dayGroup = enriched.filter((r) => r.Time.startsWith(dayLabel));
+  const dailyValues = dayGroup
     .map((r) => parseFloat(r.dB))
-    .filter((x) => Number.isFinite(x));
-  const dailyAvg = dayVals.length
-    ? dayVals.reduce((a, b) => a + b, 0) / dayVals.length
+    .filter(Number.isFinite);
+  const dailyAvg = dailyValues.length
+    ? dailyValues.reduce((a, b) => a + b, 0) / dailyValues.length
     : NaN;
 
-  // DOM 반영
+  // DOM 표시
   avgEl.textContent = Number.isFinite(currentAvg)
     ? `${currentAvg.toFixed(1)} dB`
     : "N/A";
-  alertEl.textContent = bucket.length ? `${currentAlerts}건` : "N/A";
+  alertEl.textContent = `${alerts}건`;
   dailyEl.textContent = Number.isFinite(dailyAvg)
     ? `${dailyAvg.toFixed(1)} dB`
     : "N/A";
-
-  // 제목에 기준 시점 표시
-  const hhmm = parseTimeLabel(target.Time) || "";
-  titleEl.textContent = `음향 상태 (${target._day}일차 ${hhmm} 기준)`;
+  titleEl.textContent = `음향 상태 (${dayLabel} ${timeLabel} 기준)`;
 }
 
 function renderOnDuty() {
@@ -1033,6 +988,25 @@ function renderOnDuty() {
   if (!hasAny) {
     tableBody.innerHTML = `<tr><td class="p-3 text-slate-500" colspan="2">${slotToShow} 담당자 정보가 없습니다.</td></tr>`;
   }
+}
+
+function parseTimeToDateObject(timeStr) {
+  if (!timeStr) return null;
+  const dayMap = {
+    첫째날: "2025-08-15",
+    둘째날: "2025-08-16",
+    셋째날: "2025-08-17",
+  };
+
+  const dayMatch = timeStr.match(/(첫째날|둘째날|셋째날)/);
+  const timeMatch = timeStr.match(/(\d{1,2}:\d{2})/);
+
+  if (!dayMatch || !timeMatch) return null;
+
+  const dateStr = dayMap[dayMatch[1]];
+  const timeStrFormatted = timeMatch[1];
+
+  return new Date(`${dateStr}T${timeStrFormatted}`);
 }
 
 function getColorForDb(dbValue) {
@@ -1147,7 +1121,7 @@ function updateView() {
       renderSoundAnalysis();
       break;
     case "timetable":
-      renderTimetableCalendar(); // ✅ FullCalendar 렌더링
+      renderTimetableCalendar();
       break;
   }
 }
@@ -1225,9 +1199,17 @@ window.onload = async () => {
     renderSetupTable("av");
   });
 
+  const select = document.getElementById("timetable-filter");
+  renderTimetableCalendar(select.value); // 초기 렌더
+
+  select.addEventListener("change", (e) => {
+    renderTimetableCalendar(e.target.value); // 선택 시 재렌더
+  });
+
   // Initial render
   document
     .querySelector('.tab-btn[data-tab="dashboard"]')
     .classList.add("active");
+
   updateView();
 };

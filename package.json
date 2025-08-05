@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@fullcalendar/resource-timeline": "^6.1.18",
     "express": "^5.1.0",
     "googleapis": "^150.0.1"
   }

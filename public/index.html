@@ -554,7 +554,7 @@
           <div class="mb-6">
             <h2 class="text-xl font-bold mb-1">시설부 체크리스트</h2>
             <p class="text-slate-500 text-sm">
-              팀별 사전설치 작업의 진행 상태를 관리하고 추적합니다. (읽기 전용)
+              팀별 사전설치 작업의 진행 상태를 관리하고 추적합니다.
             </p>
           </div>
           <div id="date-filter-controls" class="mb-2">
@@ -639,7 +639,7 @@
           <div class="mb-6">
             <h2 class="text-xl font-bold mb-1">AV부 체크리스트</h2>
             <p class="text-slate-500 text-sm">
-              팀별 사전설치 작업의 진행 상태를 관리하고 추적합니다. (읽기 전용)
+              팀별 사전설치 작업의 진행 상태를 관리하고 추적합니다.
             </p>
           </div>
           <div id="date-filter-controls" class="mb-2">
@@ -862,7 +862,28 @@
               날짜별 부서 및 담당자 작업 스케줄을 확인하세요.
             </p>
           </div>
-          <div id="calendar" class="bg-white rounded-lg shadow-sm p-4"></div>
+          <div id="date-filter-controls" class="mb-2">
+            <span class="text-sm text-slate-700 whitespace-nowrap"
+              >날짜를 선택해주세요.</span
+            >
+            <select
+              id="timetable-filter"
+              class="px-3 py-1 text-sm rounded-md border border-gray-300"
+            >
+              <option value="2025-08-13">2025년 8월 13일</option>
+              <option value="2025-08-14">2025년 8월 14일</option>
+              <option value="2025-08-15">2025년 8월 15일</option>
+              <option value="2025-08-16">2025년 8월 16일</option>
+              <option value="2025-08-17">2025년 8월 17일</option>
+            </select>
+          </div>
+          <!-- 타임테이블을 렌더링할 타겟 엘리먼트 -->
+          <div
+            id="timetable-container"
+            class="overflow-x-auto relative w-full mt-4 pb-10"
+          >
+            <!-- grid가 여기 들어감 -->
+          </div>
         </div>
       </main>
     </div>
