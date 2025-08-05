@@ -531,10 +531,20 @@
               <h3 class="font-bold text-slate-800" id="on-duty-title">
                 운영 담당자
               </h3>
-              <div
-                id="on-duty-list"
-                class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm mt-4"
-              ></div>
+              <div class="mt-4 overflow-x-hidden md:overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                  <thead class="bg-slate-100 text-slate-600">
+                    <tr>
+                      <th class="p-3 w-28">팀</th>
+                      <th class="p-3">담당자</th>
+                    </tr>
+                  </thead>
+                  <tbody
+                    id="on-duty-table"
+                    class="whitespace-normal break-words"
+                  ></tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

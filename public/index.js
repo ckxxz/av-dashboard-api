@@ -179,6 +179,9 @@ function renderDashboard() {
 
   renderOverallByDaysFor(db.facsetupTasks, "fac");
   renderOverallByDaysFor(db.avsetupTasks, "av");
+
+  renderSoundSummary();
+  renderOnDuty();
 }
 
 // 도넛 중앙 텍스트 플러그인 등록 (최초 1회)
@@ -866,6 +869,170 @@ function renderTimetableCalendar() {
   });
 
   calendar.render();
+}
+
+function renderSoundSummary() {
+  const avgEl = document.getElementById("avg-db-summary");
+  const alertEl = document.getElementById("db-alert-summary");
+  const dailyEl = document.getElementById("daily-avg-summary");
+  const titleEl = document.getElementById("sound-summary-title");
+
+  if (!Array.isArray(db.soundData) || db.soundData.length === 0) {
+    avgEl.textContent = "N/A";
+    alertEl.textContent = "N/A";
+    dailyEl.textContent = "N/A";
+    return;
+  }
+
+  // 이벤트 시작일(최소 날짜) 기준으로 오늘이 몇째날인지 추정 (1~3 범위로 clamp)
+  const allDates = (db.timetable || [])
+    .map((s) => s.date)
+    .filter(Boolean)
+    .sort();
+  let currentDayIdx = 1;
+  if (allDates.length) {
+    const start = new Date(allDates[0] + "T00:00:00");
+    const today = new Date();
+    const diffDays = Math.floor((today - start) / (1000 * 60 * 60 * 24)) + 1;
+    currentDayIdx = Math.min(3, Math.max(1, diffDays));
+  }
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+
+  // 정렬 가능한 키(일차, 분)로 변환
+  const ranked = db.soundData
+    .map((r) => {
+      const d = parseDayLabel(r.Time);
+      const t = parseTimeLabel(r.Time);
+      const [h, m] = t ? t.split(":").map(Number) : [0, 0];
+      return { ...r, _day: d || 0, _min: (h || 0) * 60 + (m || 0) };
+    })
+    .filter((r) => r._day > 0)
+    .sort((a, b) => (a._day === b._day ? a._min - b._min : a._day - b._day));
+
+  if (!ranked.length) {
+    avgEl.textContent = "N/A";
+    alertEl.textContent = "N/A";
+    dailyEl.textContent = "N/A";
+    return;
+  }
+
+  // 가장 가까운 슬롯 찾기(미래 우선, 없으면 가장 최근 과거)
+  let target = null;
+  for (const r of ranked) {
+    if (
+      r._day > currentDayIdx ||
+      (r._day === currentDayIdx && r._min >= nowMin)
+    ) {
+      target = r;
+      break;
+    }
+  }
+  if (!target) target = ranked[ranked.length - 1];
+
+  // 동일한 Time(문자열)로 묶어 현재 평균/경고 계산
+  const bucket = ranked.filter((r) => r.Time === target.Time);
+  const values = bucket
+    .map((r) => parseFloat(r.dB))
+    .filter((x) => Number.isFinite(x));
+
+  const currentAvg = values.length
+    ? values.reduce((a, b) => a + b, 0) / values.length
+    : NaN;
+  const currentAlerts = bucket.filter((r) => parseFloat(r.dB) > 85).length;
+
+  // 해당 일차의 일일 평균
+  const dayAll = ranked.filter((r) => r._day === target._day);
+  const dayVals = dayAll
+    .map((r) => parseFloat(r.dB))
+    .filter((x) => Number.isFinite(x));
+  const dailyAvg = dayVals.length
+    ? dayVals.reduce((a, b) => a + b, 0) / dayVals.length
+    : NaN;
+
+  // DOM 반영
+  avgEl.textContent = Number.isFinite(currentAvg)
+    ? `${currentAvg.toFixed(1)} dB`
+    : "N/A";
+  alertEl.textContent = bucket.length ? `${currentAlerts}건` : "N/A";
+  dailyEl.textContent = Number.isFinite(dailyAvg)
+    ? `${dailyAvg.toFixed(1)} dB`
+    : "N/A";
+
+  // 제목에 기준 시점 표시
+  const hhmm = parseTimeLabel(target.Time) || "";
+  titleEl.textContent = `음향 상태 (${target._day}일차 ${hhmm} 기준)`;
+}
+
+function renderOnDuty() {
+  const titleEl = document.getElementById("on-duty-title");
+  const tableBody = document.getElementById("on-duty-table");
+  if (!tableBody) return;
+  tableBody.innerHTML = "";
+
+  const rows = Array.isArray(db.operationSchedule) ? db.operationSchedule : [];
+  if (!rows.length) {
+    titleEl.textContent = "운영 담당자";
+    tableBody.innerHTML = `<tr><td class="p-3 text-slate-500" colspan="2">운영 일정이 없습니다.</td></tr>`;
+    return;
+  }
+
+  // 1) 타겟 날짜 선택 (미래 우선, 없으면 최근 과거)
+  const todayStr = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const uniqueDates = [
+    ...new Set(rows.map((r) => r.date).filter(Boolean)),
+  ].sort();
+  const futureDates = uniqueDates.filter((d) => d >= todayStr);
+  const targetDate = futureDates.length
+    ? futureDates[0]
+    : uniqueDates[uniqueDates.length - 1];
+
+  // 2) 표시할 슬롯 결정
+  const now = new Date();
+  const cutoff = new Date(); // 오늘 12:15
+  cutoff.setHours(12, 15, 0, 0);
+
+  let slotToShow = "오전";
+  if (targetDate === todayStr) {
+    slotToShow = now >= cutoff ? "오후" : "오전";
+  } else if (targetDate < todayStr) {
+    slotToShow = "오후"; // 과거면 오후로 고정(마지막 슬롯 가정)
+  } else {
+    slotToShow = "오전"; // 미래면 오전으로 고정(첫 슬롯 가정)
+  }
+
+  titleEl.textContent = `운영 담당자 (${targetDate} · ${slotToShow})`;
+
+  // 3) 해당 날짜의 요청 슬롯 가져오기
+  const slotRow =
+    rows.find((r) => r.date === targetDate && r.time === slotToShow) || {};
+
+  // 4) 팀 목록 렌더(비어있으면 공백)
+  const teams = ["audio", "video", "stage", "it", "etc"];
+  const teamNames = {
+    audio: "오디오",
+    video: "비디오",
+    stage: "무대",
+    it: "IT",
+    etc: "공통",
+  };
+
+  let hasAny = false;
+  teams.forEach((team) => {
+    const val = (slotRow[team] || "").toString().trim();
+    if (val) hasAny = true;
+    const tr = document.createElement("tr");
+    tr.className = "border-b border-slate-200 hover:bg-slate-50";
+    tr.innerHTML = `
+      <td class="p-3 font-semibold min-w-[80px]">${teamNames[team]}</td>
+      <td class="p-3">${val}</td>
+    `;
+    tableBody.appendChild(tr);
+  });
+
+  if (!hasAny) {
+    tableBody.innerHTML = `<tr><td class="p-3 text-slate-500" colspan="2">${slotToShow} 담당자 정보가 없습니다.</td></tr>`;
+  }
 }
 
 function getColorForDb(dbValue) {
