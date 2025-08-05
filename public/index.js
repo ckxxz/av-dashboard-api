@@ -782,10 +782,9 @@ function renderTrendChart(data) {
     },
   });
 }
-
 function renderTimetableCalendar(selectedDate = "2025-08-13") {
   const container = document.getElementById("timetable-container");
-  container.innerHTML = ""; // 초기화
+  container.innerHTML = "";
 
   const partColors = {
     "시설부 무대설치A팀": "#3B82F6",
@@ -804,46 +803,68 @@ function renderTimetableCalendar(selectedDate = "2025-08-13") {
     "AV부 IT팀": "#DC2626",
   };
 
-  // ⬇️ 날짜 필터 적용
   const filtered = db.timetable.filter((item) => item.date === selectedDate);
 
-  const teams = Object.keys(partColors);
-  const times = Array.from(new Set(filtered.map((item) => item.time))).sort(
+  // timeList를 실제 시간 정렬로 추출
+  const timeList = Array.from(new Set(filtered.map((item) => item.time))).sort(
     (a, b) => {
-      return (
-        new Date("1970-01-01T" + a.split(" - ")[0]) -
-        new Date("1970-01-01T" + b.split(" - ")[0])
-      );
+      const getStart = (t) => new Date("1970-01-01T" + t.split(" - ")[0]);
+      return getStart(a) - getStart(b);
     }
   );
 
-  const cellMap = {};
-  filtered.forEach(({ time, part, task }) => {
-    if (!cellMap[time]) cellMap[time] = {};
-    cellMap[time][part] = task;
-  });
+  const teams = Object.keys(partColors);
+  const timeToIndex = Object.fromEntries(timeList.map((t, i) => [t, i]));
 
-  const gridTemplate = `grid grid-cols-[120px_repeat(${teams.length},minmax(140px,1fr))] border text-sm w-fit`;
   const grid = document.createElement("div");
-  grid.className = gridTemplate;
+  grid.className = `grid grid-cols-[120px_repeat(${teams.length},minmax(140px,1fr))] border text-sm w-fit`;
 
+  // 헤더
   grid.appendChild(createCell("시간", true, true));
   teams.forEach((team) => grid.appendChild(createCell(team, true)));
 
-  times.forEach((time) => {
-    grid.appendChild(createCell(time, false, true));
+  // 병합 여부 기록용
+  const mergedMap = {}; // key: `${time}-${team}` => { skip: true }
+
+  timeList.forEach((time, rowIndex) => {
+    grid.appendChild(createCell(time, false, true)); // 시간 열
+
     teams.forEach((team) => {
-      const task = cellMap[time]?.[team] || "";
-      const color = partColors[team] || "#E5E7EB";
-      const cell = createCell(task);
-      if (task) {
-        cell.style.backgroundColor = color;
+      const taskItem = filtered.find((f) => f.time === time && f.part === team);
+      const key = `${time}-${team}`;
+      if (mergedMap[key]) return; // 병합된 셀 내부면 skip
+
+      if (taskItem) {
+        const [startStr, endStr] = taskItem.time.split(" - ");
+        const start = new Date("1970-01-01T" + startStr);
+        const end = new Date("1970-01-01T" + endStr);
+
+        // 몇 칸 span 할 것인지 계산
+        let span = 1;
+        for (let i = rowIndex + 1; i < timeList.length; i++) {
+          const nextTime = timeList[i];
+          const nextStart = new Date("1970-01-01T" + nextTime.split(" - ")[0]);
+          if (nextStart < end) {
+            span++;
+            mergedMap[`${nextTime}-${team}`] = { skip: true }; // 이후 셀은 건너뜀
+          } else {
+            break;
+          }
+        }
+
+        const cell = createCell(taskItem.task);
+        cell.style.backgroundColor = partColors[team] || "#E5E7EB";
         cell.style.color = "white";
         cell.style.fontWeight = "500";
         cell.style.borderRadius = "4px";
         cell.style.whiteSpace = "pre-line";
+        if (span > 1) {
+          cell.style.gridRow = `span ${span}`;
+        }
+        grid.appendChild(cell);
+      } else {
+        grid.appendChild(createCell(""));
       }
-      grid.appendChild(cell);
     });
   });
 
