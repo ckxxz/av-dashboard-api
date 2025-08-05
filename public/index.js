@@ -517,12 +517,13 @@ function renderOperationSchedule() {
   };
 
   // 팀 키값과 팀 이름 정의
-  const teams = ["audio", "video", "stage", "it"];
+  const teams = ["audio", "video", "stage", "it", "etc"];
   const teamNames = {
     audio: "오디오",
     video: "비디오",
     stage: "무대",
     it: "IT",
+    etc: "공통",
   };
 
   // 팀별로 행 생성
