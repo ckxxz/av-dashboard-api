@@ -1213,7 +1213,7 @@ window.onload = async () => {
       const btn = e.target.closest(".status-chip");
       if (!btn) return;
       const taskId = parseInt(btn.dataset.taskId);
-      updateTaskStatus(taskId, "fac");
+      //updateTaskStatus(taskId, "fac");
     });
 
   document
@@ -1222,7 +1222,7 @@ window.onload = async () => {
       const btn = e.target.closest(".status-chip");
       if (!btn) return;
       const taskId = parseInt(btn.dataset.taskId);
-      updateTaskStatus(taskId, "av");
+      //updateTaskStatus(taskId, "av");
     });
 
   document.querySelector("nav").addEventListener("click", handleNavClick);
