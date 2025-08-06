@@ -55,8 +55,6 @@ async function loadAllData() {
     db.operationSchedule = scheduleData;
     db.timetable = timetableData;
     db.soundData = soundData;
-
-    console.log(soundData);
   } catch (error) {
     console.error("Error loading data from API:", error);
     alert(
@@ -232,10 +230,6 @@ function renderOverallByDaysFor(setupTasks, prefix) {
 
   const total17 = day17.length;
   const completed17 = day17.filter((t) => t.completed === "완료").length;
-
-  // 디버그
-  console.log(`[${prefix}] 13일 total/completed =>`, total13, completed13);
-  console.log(`[${prefix}] 17일 total/completed =>`, total17, completed17);
 
   renderDonutChart(
     `${prefix}13OverallProgressChart`,
@@ -918,45 +912,62 @@ function renderSoundSummary() {
 
   const now = new Date();
 
-  const enriched = db.soundData
+  const dayMap = {
+    첫째날: "2025-08-15",
+    둘째날: "2025-08-16",
+    셋째날: "2025-08-17",
+  };
+
+  const todayKey = "첫째날";
+  const targetDateStr = dayMap[todayKey];
+  const [year, month, day] = targetDateStr.split("-").map(Number);
+  const targetDate = new Date(year, month - 1, day, 0, 0);
+
+  const dayRows = db.soundData
     .map((row) => {
-      const parsedTime = parseTimeToDateObject(row.Time);
-      return parsedTime ? { ...row, parsedTime } : null;
+      if (!row.Time.startsWith(todayKey)) return null;
+
+      const timeMatch = row.Time.match(/\d{1,2}:\d{2}/);
+      if (!timeMatch) return null;
+
+      const [hour, minute] = timeMatch[0].split(":").map(Number);
+      const parsedTime = new Date(year, month - 1, day, hour, minute);
+
+      return { ...row, parsedTime };
     })
     .filter(Boolean)
     .sort((a, b) => a.parsedTime - b.parsedTime);
 
-  if (!enriched.length) {
+  if (!dayRows.length) {
     avgEl.textContent = alertEl.textContent = dailyEl.textContent = "N/A";
     return;
   }
 
-  // 현재 이후 중 가장 가까운 값, 없으면 마지막 값
-  let target = enriched.find((r) => r.parsedTime > now);
-  if (!target) target = enriched[enriched.length - 1];
+  let target;
 
-  // target 기준 Time을 기준으로 평균, 경고 계산
-  const group = enriched.filter((r) => r.Time === target.Time);
+  if (now < targetDate) {
+    target = dayRows[0];
+  } else {
+    target =
+      dayRows.find((r) => r.parsedTime > now) || dayRows[dayRows.length - 1];
+  }
+
+  const group = dayRows.filter((r) => r.Time === target.Time);
   const dbValues = group.map((r) => parseFloat(r.dB)).filter(Number.isFinite);
-
   const currentAvg = dbValues.length
     ? dbValues.reduce((a, b) => a + b, 0) / dbValues.length
     : NaN;
   const alerts = group.filter((r) => parseFloat(r.dB) > 85).length;
 
-  const dayLabel = target.Time.split(" - ")[0];
-  const timeLabel = target.Time.match(/\d{1,2}:\d{2}/)?.[0] || "";
-
-  // 일일 평균 계산
-  const dayGroup = enriched.filter((r) => r.Time.startsWith(dayLabel));
-  const dailyValues = dayGroup
+  const dailyValues = dayRows
     .map((r) => parseFloat(r.dB))
     .filter(Number.isFinite);
   const dailyAvg = dailyValues.length
     ? dailyValues.reduce((a, b) => a + b, 0) / dailyValues.length
     : NaN;
 
-  // DOM 표시
+  const timeLabel = target.Time.match(/\d{1,2}:\d{2}/)?.[0] || "";
+
   avgEl.textContent = Number.isFinite(currentAvg)
     ? `${currentAvg.toFixed(1)} dB`
     : "N/A";
@@ -964,7 +975,7 @@ function renderSoundSummary() {
   dailyEl.textContent = Number.isFinite(dailyAvg)
     ? `${dailyAvg.toFixed(1)} dB`
     : "N/A";
-  titleEl.textContent = `음향 상태 (${dayLabel} ${timeLabel} 기준)`;
+  titleEl.textContent = `음향 상태 (${todayKey} ${timeLabel} 기준)`;
 }
 
 function renderOnDuty() {
@@ -1039,22 +1050,19 @@ function renderOnDuty() {
 }
 
 function parseTimeToDateObject(timeStr) {
-  if (!timeStr) return null;
   const dayMap = {
     첫째날: "2025-08-15",
     둘째날: "2025-08-16",
     셋째날: "2025-08-17",
   };
 
-  const dayMatch = timeStr.match(/(첫째날|둘째날|셋째날)/);
-  const timeMatch = timeStr.match(/(\d{1,2}:\d{2})/);
+  const match = timeStr.match(/(첫째날|둘째날|셋째날).*?(\d{1,2}:\d{2})/);
+  if (!match) return null;
 
-  if (!dayMatch || !timeMatch) return null;
+  const day = dayMap[match[1]];
+  const time = match[2];
 
-  const dateStr = dayMap[dayMatch[1]];
-  const timeStrFormatted = timeMatch[1];
-
-  return new Date(`${dateStr}T${timeStrFormatted}`);
+  return day && time ? new Date(`${day}T${time}:00`) : null;
 }
 
 function getColorForDb(dbValue) {
