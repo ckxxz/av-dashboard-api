@@ -21,6 +21,46 @@ async function getSheetsClient() {
   return google.sheets({ version: "v4", auth: authClient });
 }
 
+
+
+app.get("/api/post", async (req, res) => {
+  try {
+    const sheets = google.sheets({ version: "v4", auth });
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: "1VMujU6OJpvg0QyfjOQXep0LcC0FNXLcejkkXxk28i8Y",
+      range: "설문지 응답 시트1!A2:C", // ✅ 정확한 범위
+    });
+
+    const rows = response.data.values;
+
+    if (!rows.length) {
+      return res.status(204).send("No data available");
+    }
+
+    // ✅ 헤더를 명시적으로 지정
+    const headers = [
+      "Timestamp",        // A열에 해당하는 키
+      "이름 또는 닉네임",   // B열에 해당하는 키
+      "소감을 적어주세요"  // C열에 해당하는 키
+    ];
+
+    const data = rows.map((row) => {
+      const rowData = {};
+      headers.forEach((header, index) => {
+        rowData[header] = row[index] || "";
+      });
+      return rowData;
+    });
+
+    res.json(data);
+  } catch (error) {
+    console.error("❌ Google Sheets fetch error:", error);
+    res.status(500).send("Error fetching data from Google Sheets");
+  }
+});
+
+
 app.get("/api/SoundData", async (req, res) => {
   try {
     const sheets = google.sheets({ version: "v4", auth });

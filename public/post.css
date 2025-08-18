@@ -1,6 +1,6 @@
 body {
   /* 푸른 하늘 배경. 'your-sky-image.jpg'를 실제 이미지 파일명으로 변경하세요. */
-  background-image: url("img/luis-olmos-6LO5cKNPA9A-unsplash.jpg");
+  background-image: url("img/uriel-xtgONQzGgOE-unsplash.jpg");
   background-size: cover;
   background-attachment: fixed;
   background-position: center;
@@ -120,10 +120,9 @@ body {
     transform: translateY(0) rotate(1deg);
   }
 }
-
---- ### **모바일 환경 (480px 이하)** ```css @media (max-width: 480px) {
+@media (max-width: 480px) {
   body {
-    background-attachment: scroll; /* 모바일에서 배경 고정 해제 */
+    background-attachment: scroll;
   }
 
   .container {
@@ -139,6 +138,10 @@ body {
 
   .post-it {
     box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+    /* 모바일에서 포스트잇 패딩을 줄이고 비율 고정 해제 */
+    padding: 10px;
+    aspect-ratio: auto;
+    height: auto; /* 내용에 따라 높이가 유동적으로 변하도록 설정 */
   }
 
   .pin {
@@ -147,7 +150,9 @@ body {
   }
 
   .message {
-    font-size: 0.9em;
+    /* 모바일에서만 글자 크기 가변적으로 조절 */
+    font-size: clamp(0.7em, 3.5vw, 1em);
+    margin-top: 10px; /* 패딩이 줄어든 만큼 마진도 줄여줌 */
   }
 
   .signature {

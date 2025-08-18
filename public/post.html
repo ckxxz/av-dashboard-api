@@ -3,56 +3,90 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>반응형 코르크 게시판</title>
+    <title>AV부 게시판</title>
     <link rel="stylesheet" href="post.css" />
   </head>
   <body>
-    <div>
-      <div class="container">
-        <div class="post-it-wrapper">
-          <div class="post-it">
-            <div class="pin"></div>
-            <p class="message">
-              전제원 형제 사랑합니다.전제원 형제 사랑합니다.전제원 형제
-              사랑합니다.전제원 형제 사랑합니다.전제원 형제 사랑합니다.전제원
-              형제 사랑합니다.
-            </p>
-            <p class="signature">- 이남진 -</p>
-          </div>
-        </div>
-
-        <div class="post-it-wrapper">
-          <div class="post-it">
-            <div class="pin"></div>
-            <p class="message">권영인 형제 너무 멋있습니다.</p>
-            <p class="signature">- 익명 -</p>
-          </div>
-        </div>
-
-        <div class="post-it-wrapper">
-          <div class="post-it">
-            <div class="pin"></div>
-            <p class="message">
-              권영인 형제 너무 멋있습니다.권영인 형제 너무 멋있습니다.권영인
-              형제 너무 멋있습니다.권영인 형제 너무 멋있습니다.
-            </p>
-            <p class="signature">- 익명 -</p>
-          </div>
-        </div>
-
-        <div class="post-it-wrapper">
-          <div class="post-it">
-            <div class="pin"></div>
-            <p class="message">
-              권영인 형제 너무 멋있습니다.권영인 형제 너무 멋있습니다.권영인
-              형제 너무 멋있습니다.권영인 형제 너무 멋있습니다.권영인 형제 너무
-              멋있습니다.권영인 형제 너무 멋있습니다.권영인 형제 너무
-              멋있습니다.권영인 형제 너무 멋있습니다.
-            </p>
-            <p class="signature">- 익명 -</p>
-          </div>
-        </div>
-      </div>
+    <!--
+      이곳에 있던 모든 하드코딩된 포스트잇 내용은 제거되었습니다.
+      이제 인라인 JavaScript가 /api/post에서 데이터를 가져와서
+      아래 <div class="container"> 안에 포스트잇을 동적으로 생성할 것입니다.
+    -->
+    <div class="container">
+      <!-- 포스트잇이 여기에 로드됩니다 -->
     </div>
+
+    <!-- 인라인 클라이언트 사이드 스크립트 -->
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+          const container = document.querySelector('.container');
+
+          async function fetchAndRenderPosts() {
+              try {
+                  // Node.js 서버의 /api/post 엔드포인트를 호출합니다.
+                  const response = await fetch('/api/post');
+                  if (!response.ok) {
+                      throw new Error(`HTTP error! status: ${response.status}`);
+                  }
+                  const posts = await response.json();
+
+                  // 데이터가 비어있을 경우 메시지를 표시합니다.
+                  if (posts.length === 0) {
+                      container.innerHTML = '<p style="text-align: center; color: #555;">아직 게시된 소감이 없습니다.</p>';
+                      return;
+                  }
+
+                  // 기존 포스트잇을 모두 제거합니다 (새로 로드 시 중복 방지).
+                  container.innerHTML = '';
+
+                  // 각 응답 데이터를 기반으로 포스트잇 요소를 생성합니다.
+                  posts.forEach(postData => {
+                      // /api/post 엔드포인트에서 정의된 헤더 이름을 사용합니다.
+                      // Google Sheets의 '소감을 적어주세요' 컬럼에서 메시지를 가져옵니다.
+                      const messageText = postData['소감을 적어주세요'] || ''; 
+                      // Google Sheets의 '이름 또는 닉네임' 컬럼에서 서명을 가져옵니다.
+                      const signatureText = postData['이름 또는 닉네임'] || '익명';
+
+                      // 내용이 없거나 서명이 '익명'인 경우 (아마도 빈 행) 해당 포스트잇은 건너뜁니다.
+                      if (messageText.trim() === '' && signatureText.trim() === '익명') {
+                          return; 
+                      }
+
+                      const postItWrapper = document.createElement('div');
+                      postItWrapper.className = 'post-it-wrapper';
+
+                      const postIt = document.createElement('div');
+                      postIt.className = 'post-it';
+
+                      const pin = document.createElement('div');
+                      pin.className = 'pin';
+
+                      const message = document.createElement('p');
+                      message.className = 'message';
+                      message.textContent = messageText;
+
+                      const signature = document.createElement('p');
+                      signature.className = 'signature';
+                      signature.textContent = `- ${signatureText} -`;
+
+                      // 생성된 요소들을 DOM에 추가합니다.
+                      postIt.appendChild(pin);
+                      postIt.appendChild(message);
+                      postIt.appendChild(signature);
+                      postItWrapper.appendChild(postIt);
+                      container.appendChild(postItWrapper);
+                  });
+              } catch (error) {
+                  // 오류 발생 시 콘솔에 기록하고 사용자에게 메시지를 표시합니다.
+                  console.error('포스트잇 데이터를 불러오는 중 오류 발생:', error);
+                  container.innerHTML = `<p style="text-align: center; color: red;">데이터를 불러오지 못했습니다: ${error.message}</p>`;
+              }
+          }
+
+          // DOMContentLoaded 이벤트 발생 시 포스트잇 데이터를 가져와 렌더링합니다.
+          // 이는 HTML 문서가 완전히 로드되고 파싱된 후에 스크립트가 실행되도록 보장합니다.
+          fetchAndRenderPosts();
+      });
+    </script>
   </body>
 </html>
