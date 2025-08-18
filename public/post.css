@@ -1,0 +1,168 @@
+body {
+  /* 푸른 하늘 배경. 'your-sky-image.jpg'를 실제 이미지 파일명으로 변경하세요. */
+  background-image: url("img/luis-olmos-6LO5cKNPA9A-unsplash.jpg");
+  background-size: cover;
+  background-attachment: fixed;
+  background-position: center;
+  font-family: "Arial", sans-serif;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px;
+}
+
+.post-it-wrapper {
+  width: calc(50% - 20px);
+  max-width: 400px;
+  position: relative;
+  padding-top: 10px;
+  animation: sway 5s ease-in-out infinite;
+  transform-origin: center top;
+}
+
+/* 애니메이션 지연 시간 및 방향으로 더 자연스러운 움직임 연출 */
+.post-it-wrapper:nth-child(2n) {
+  animation-delay: -2s;
+  animation-direction: normal;
+}
+
+.post-it-wrapper:nth-child(3n) {
+  animation-delay: -3s;
+  animation-direction: reverse;
+}
+
+.post-it {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 20px;
+  box-sizing: border-box;
+  box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.15);
+  border-radius: 2px;
+}
+
+.post-it-wrapper:nth-child(3n + 1) .post-it {
+  background-color: #ffe6e6; /* 연한 핑크 */
+}
+
+.post-it-wrapper:nth-child(3n + 2) .post-it {
+  background-color: #e6f9ff; /* 연한 하늘색 */
+}
+
+.post-it-wrapper:nth-child(3n) .post-it {
+  background-color: #e6ffef; /* 연한 민트색 */
+}
+
+.pin {
+  width: 25px;
+  height: 25px;
+  background-color: #d82b2b;
+  border-radius: 50%;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.pin::before {
+  content: "";
+  display: block;
+  width: 5px;
+  height: 15px;
+  background-color: rgba(0, 0, 0, 0.2);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.message {
+  font-size: 1.2em;
+  color: #333;
+  line-height: 1.5;
+  text-align: center;
+  margin-top: 20px;
+}
+
+.signature {
+  font-style: italic;
+  color: #555;
+  text-align: right;
+  margin-top: 30px;
+  font-size: 1em;
+}
+
+/* 포스트잇 회전 효과 */
+.post-it-wrapper:nth-child(2n) .post-it {
+  transform: rotate(1deg);
+}
+
+.post-it-wrapper:nth-child(2n + 1) .post-it {
+  transform: rotate(-1deg);
+}
+
+/* 바람에 살랑이는 애니메이션 */
+@keyframes sway {
+  0% {
+    transform: translateY(0) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(-1deg);
+  }
+  100% {
+    transform: translateY(0) rotate(1deg);
+  }
+}
+
+--- ### **모바일 환경 (480px 이하)** ```css @media (max-width: 480px) {
+  body {
+    background-attachment: scroll; /* 모바일에서 배경 고정 해제 */
+  }
+
+  .container {
+    gap: 20px;
+    justify-content: space-around;
+  }
+
+  .post-it-wrapper {
+    width: calc(50% - 10px);
+    padding-top: 10px;
+    animation: sway-mobile 3s ease-in-out infinite;
+  }
+
+  .post-it {
+    box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  .pin {
+    width: 20px;
+    height: 20px;
+  }
+
+  .message {
+    font-size: 0.9em;
+  }
+
+  .signature {
+    font-size: 0.8em;
+  }
+}
+
+@keyframes sway-mobile {
+  0% {
+    transform: translateY(0) rotate(0.5deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(-0.5deg);
+  }
+  100% {
+    transform: translateY(0) rotate(0.5deg);
+  }
+}
