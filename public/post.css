@@ -46,17 +46,47 @@ body {
   border-radius: 2px;
 }
 
-.post-it-wrapper:nth-child(3n + 1) .post-it {
-  background-color: #ffe6e6; /* 연한 핑크 */
-}
-
-.post-it-wrapper:nth-child(3n + 2) .post-it {
-  background-color: #e6f9ff; /* 연한 하늘색 */
-}
-
-.post-it-wrapper:nth-child(3n) .post-it {
-  background-color: #e6ffef; /* 연한 민트색 */
-}
+.post-it-wrapper:nth-child(10n + 1) .post-it {
+    background-color: #ffe6e6; /* 연한 핑크 */
+  }
+  
+  .post-it-wrapper:nth-child(10n + 2) .post-it {
+    background-color: #e6f9ff; /* 연한 하늘색 */
+  }
+  
+  .post-it-wrapper:nth-child(10n + 3) .post-it {
+    background-color: #e6ffef; /* 연한 민트색 */
+  }
+  
+  .post-it-wrapper:nth-child(10n + 4) .post-it {
+    background-color: #fffacd; /* 레몬 쉬폰 (연한 노랑) */
+  }
+  
+  .post-it-wrapper:nth-child(10n + 5) .post-it {
+    background-color: #e0e6fa; /* 연한 라벤더 */
+  }
+  
+  /* 추가된 5가지 새로운 색상 */
+  .post-it-wrapper:nth-child(10n + 6) .post-it {
+    background-color: #fce6ff; /* 연한 보라 */
+  }
+  
+  .post-it-wrapper:nth-child(10n + 7) .post-it {
+    background-color: #e6fffa; /* 연한 청록 */
+  }
+  
+  .post-it-wrapper:nth-child(10n + 8) .post-it {
+    background-color: #fae6e6; /* 연한 살구 */
+  }
+  
+  .post-it-wrapper:nth-child(10n + 9) .post-it {
+    background-color: #e6f0ff; /* 연한 파랑 */
+  }
+  
+  .post-it-wrapper:nth-child(10n + 10) .post-it {
+    background-color: #fff2e6; /* 연한 오렌지 */
+  }
+  
 
 .pin {
   width: 25px;
