@@ -1,7 +1,7 @@
 body {
   /* 푸른 하늘 배경. 'your-sky-image.jpg'를 실제 이미지 파일명으로 변경하세요. */
-  background-image: url("img/uriel-xtgONQzGgOE-unsplash.jpg");
-  background-size: cover;
+  background-image: url("img/istockphoto-938695332-612x612.jpg");
+  background-size: auto;
   background-attachment: fixed;
   background-position: center;
   font-family: "Arial", sans-serif;
